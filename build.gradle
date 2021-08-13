@@ -16,7 +16,7 @@
  */
 
 plugins {
-    id 'net.wooga.plugins' version '2.2.2-rc.1' //needs git repository with filled HEAD (at least one commit)
+    id 'net.wooga.plugins' version '2.2.1' //needs git repository with filled HEAD (at least one commit)
 }
 
 group 'net.wooga.gradle'
@@ -29,11 +29,15 @@ pluginBundle {
 
     plugins {
         sonarqube {
-            id = 'net.wooga.unitysonar'
-            displayName = 'Gradle Unity plugin'
-            description = 'This plugin provides tasks for working with Unity3D projects'
+            id = 'net.wooga.gradle.dotnet-sonarqube'
+            displayName = 'Sonarqube plugin for .NET solutions'
+            description = 'This plugin provides tools to run sonarqube scans for .NET solutions'
         }
     }
+}
+
+repositories {
+    mavenCentral()
 }
 
 github {
@@ -41,7 +45,5 @@ github {
 }
 
 dependencies {
-    testImplementation("com.wooga.spock.extensions:spock-unity-version-manager-extension:0.1.0") {
-        exclude module: 'groovy-all'
-    }
+    implementation 'org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:3.2.0'
 }
