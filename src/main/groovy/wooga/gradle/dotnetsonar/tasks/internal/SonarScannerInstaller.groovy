@@ -42,6 +42,10 @@ class SonarScannerInstaller {
         unzipper.unzip(zippedFile, installationDir)
 
         def scannerFile = findScannerExecutableFile(installationDir)
+        scannerFile.with {
+            readable = true
+            executable = true
+        }
 
         return scannerFile
     }
