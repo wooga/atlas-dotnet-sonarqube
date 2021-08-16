@@ -2,6 +2,9 @@ package wooga.gradle.dotnetsonar.tasks.internal
 
 import nebula.test.ProjectSpec
 import org.gradle.process.ExecSpec
+import spock.lang.IgnoreIf
+
+import static wooga.gradle.dotnetsonar.utils.SpecUtils.execDotnetApp
 
 class SonarScannerInstallerSpec extends ProjectSpec {
 
@@ -22,9 +25,7 @@ class SonarScannerInstallerSpec extends ProjectSpec {
         scannerExec.exists()
         scannerExec.canExecute()
         scannerExec.name == "SonarScanner.MSBuild.exe"
-        def execRes = new GradleShell(project).execute { ExecSpec it ->
-            it.executable = scannerExec.absolutePath
-        }
+        def execRes = execDotnetApp(project, scannerExec)
         execRes.stdOutString.contains("Using the .NET Framework version of the Scanner for MSBuild")
         execRes.execResult.exitValue == 1
     }

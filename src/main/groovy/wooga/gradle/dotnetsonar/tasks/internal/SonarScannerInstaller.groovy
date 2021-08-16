@@ -4,6 +4,7 @@ import org.gradle.api.Project
 
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.nio.file.attribute.PosixFilePermission
 
 class SonarScannerInstaller {
 
@@ -42,7 +43,12 @@ class SonarScannerInstaller {
         unzipper.unzip(zippedFile, installationDir)
 
         def scannerFile = findScannerExecutableFile(installationDir)
-
+        if(!OSOps.isWindows()) {
+            Files.setPosixFilePermissions(scannerFile.toPath(), EnumSet.of(
+                    PosixFilePermission.GROUP_EXECUTE,
+                    PosixFilePermission.OWNER_EXECUTE,
+                    PosixFilePermission.OTHERS_EXECUTE))
+        }
         return scannerFile
     }
 
