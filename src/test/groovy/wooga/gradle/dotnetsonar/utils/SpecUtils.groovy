@@ -26,26 +26,6 @@ class SpecUtils {
             }
         }
     }
-//    static boolean hasFilePermissions(File file, PosixFilePermission... permissions) {
-//        if(!isWindows()) {
-//            return Files.getPosixFilePermissions(file.toPath()).every {
-//                permissions.contains(it)
-//            }
-//        } else {
-//            boolean result = true
-//            //enums entries are being static imported from PosixFilePermission
-//            if(GROUP_EXECUTE in permissions || OWNER_EXECUTE in permissions || OTHERS_EXECUTE in permissions) {
-//                result = result && file.canExecute()
-//            }
-//            if(GROUP_READ in permissions || OWNER_READ in permissions || OTHERS_READ in permissions) {
-//                result = result && file.canRead()
-//            }
-//            if(GROUP_WRITE in permissions || OWNER_WRITE in permissions || OTHERS_WRITE in permissions) {
-//                result = result && file.canWrite()
-//            }
-//            return result
-//        }
-//    }
 
     static File emptyTmpFile(String name) {
         File file = new File(name)

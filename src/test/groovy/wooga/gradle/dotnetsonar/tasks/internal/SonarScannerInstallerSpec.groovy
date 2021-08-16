@@ -2,11 +2,6 @@ package wooga.gradle.dotnetsonar.tasks.internal
 
 import nebula.test.ProjectSpec
 
-import static java.nio.file.attribute.PosixFilePermission.GROUP_EXECUTE
-import static java.nio.file.attribute.PosixFilePermission.GROUP_READ
-import static java.nio.file.attribute.PosixFilePermission.OTHERS_READ
-import static java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE
-import static java.nio.file.attribute.PosixFilePermission.OWNER_READ
 import static wooga.gradle.dotnetsonar.utils.SpecUtils.execDotnetApp
 
 class SonarScannerInstallerSpec extends ProjectSpec {
