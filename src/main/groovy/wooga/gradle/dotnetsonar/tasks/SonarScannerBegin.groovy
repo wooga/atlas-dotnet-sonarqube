@@ -17,7 +17,7 @@ class SonarScannerBegin extends DefaultTask {
             //would be better if this was associated to github repository, see atlas-plugins
             property("sonar.projectKey", project.rootProject.name)
             property("sonar.projectName", project.rootProject.name)
-            property("sonar.sources", ".")
+            //property("sonar.sources", ".")
             if(project.version != null) {
                 property("sonar.version", project.version.toString())
             }

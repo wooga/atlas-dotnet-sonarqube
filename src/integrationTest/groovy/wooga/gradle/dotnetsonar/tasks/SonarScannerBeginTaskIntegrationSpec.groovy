@@ -21,7 +21,8 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
         version = "${projectVersion}"
         sonarqube {
             properties {
-                property "sonar.sources", "src"
+                property "sonar.prop", ""
+                property "sonar.exclusions", "src"
             }
         }
         """
@@ -31,7 +32,9 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
         def execResults = FakeExecutable.lastExecutionResults(result)
         execResults.args.contains("-k:${moduleName}".toString())
         execResults.args.contains("-v:${projectVersion}".toString())
-        execResults.args.contains("-d:sonar.sources=src")
+        execResults.args.contains("-d:sonar.exclusions=src")
+        !execResults.args.contains("-d:sonar.sources=")
+        !execResults.args.contains("-d:sonar.prop=")
         result.wasExecuted(":sonarScannerInstall")
     }
 

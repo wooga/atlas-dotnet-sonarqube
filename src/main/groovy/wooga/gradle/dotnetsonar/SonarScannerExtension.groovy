@@ -13,7 +13,7 @@ class SonarScannerExtension {
 
     public static final String SONARSCANNER_EXTENSION_NAME = "sonarScanner"
     public static final String MS_BUILD_TASK_NAME = "solutionMSBuild"
-    public static final String DOTNET_BUILD_TASK_NAME = "solutionDotNetBuild"
+    public static final String DOTNET_BUILD_TASK_NAME = "solutionDotnetBuild"
     public static final String INSTALL_TASK_NAME = "sonarScannerInstall"
     public static final String BEGIN_TASK_NAME = "sonarScannerBegin"
     public static final String END_TASK_NAME = "sonarScannerEnd"
@@ -63,6 +63,9 @@ class SonarScannerExtension {
         def actionBroadcastMap = new HashMap<String, ActionBroadcast<SonarQubeProperties>>()
         actionBroadcastMap[project.path] = actionBroadcast
         def propertyComputer = new SonarPropertyComputer(actionBroadcastMap, project)
-        return propertyComputer.computeSonarProperties()
+        def properties = propertyComputer.computeSonarProperties()
+        return properties.collectEntries {
+            return it.value != null && it.value != ""? [it.key, it.value] : []
+        }
     }
 }
