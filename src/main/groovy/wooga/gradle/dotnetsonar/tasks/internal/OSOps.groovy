@@ -3,7 +3,6 @@ package wooga.gradle.dotnetsonar.tasks.internal
 import org.gradle.api.Project
 import org.gradle.process.ExecSpec
 
-
 class OSOps {
 
     private static String osName = System.getProperty("os.name").toLowerCase()

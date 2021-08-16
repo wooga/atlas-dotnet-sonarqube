@@ -101,7 +101,4 @@ class OSOpsSpec extends ProjectSpec {
         e.message == "File ${falseFile.absolutePath} does not exists"
     }
 
-
-
-
 }

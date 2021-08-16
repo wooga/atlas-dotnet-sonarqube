@@ -1,9 +1,31 @@
 package wooga.gradle.dotnetsonar.utils
 
 import groovy.json.StringEscapeUtils
+import org.gradle.api.Project
+import wooga.gradle.dotnetsonar.tasks.internal.GradleShell
+import wooga.gradle.dotnetsonar.tasks.internal.OSOps
 import wooga.gradle.dotnetsonar.tasks.internal.Shell
+import wooga.gradle.dotnetsonar.tasks.internal.ShellResult
+
 
 class SpecUtils {
+
+    static ShellResult execDotnetApp(Project project, File app) {
+        Shell shell = new GradleShell(project)
+        if(isWindows()) {
+            return shell.execute { exec ->
+                exec.executable = app.absolutePath
+            }
+        } else {
+            def mono = OSOps.findInOSPath(shell, "mono").orElseThrow {
+                throw new FileNotFoundException("Could not find 'mono' executable in OS path")
+            }
+            return shell.execute { exec ->
+                exec.executable = mono.absolutePath
+                exec.args = [app.absolutePath]
+            }
+        }
+    }
 
     static File emptyTmpFile(String name) {
         File file = new File(name)
