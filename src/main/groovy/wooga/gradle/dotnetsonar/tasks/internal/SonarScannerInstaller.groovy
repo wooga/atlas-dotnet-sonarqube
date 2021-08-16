@@ -6,6 +6,8 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.attribute.PosixFilePermission
 
+import static java.nio.file.attribute.PosixFilePermission.*
+
 class SonarScannerInstaller {
 
     //this executable only exists for .NET [4.6, 5)
@@ -43,12 +45,11 @@ class SonarScannerInstaller {
         unzipper.unzip(zippedFile, installationDir)
 
         def scannerFile = findScannerExecutableFile(installationDir)
-        if(!OSOps.isWindows()) {
-            Files.setPosixFilePermissions(scannerFile.toPath(), EnumSet.of(
-                    PosixFilePermission.GROUP_EXECUTE,
-                    PosixFilePermission.OWNER_EXECUTE,
-                    PosixFilePermission.OTHERS_EXECUTE))
+        scannerFile.with {
+            readable = true
+            executable = true
         }
+
         return scannerFile
     }
 

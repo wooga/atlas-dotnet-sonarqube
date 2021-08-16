@@ -1,9 +1,12 @@
 package wooga.gradle.dotnetsonar.tasks.internal
 
 import nebula.test.ProjectSpec
-import org.gradle.process.ExecSpec
-import spock.lang.IgnoreIf
 
+import static java.nio.file.attribute.PosixFilePermission.GROUP_EXECUTE
+import static java.nio.file.attribute.PosixFilePermission.GROUP_READ
+import static java.nio.file.attribute.PosixFilePermission.OTHERS_READ
+import static java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE
+import static java.nio.file.attribute.PosixFilePermission.OWNER_READ
 import static wooga.gradle.dotnetsonar.utils.SpecUtils.execDotnetApp
 
 class SonarScannerInstallerSpec extends ProjectSpec {
@@ -24,6 +27,7 @@ class SonarScannerInstallerSpec extends ProjectSpec {
         then: "sonar scanner executable should be executing"
         scannerExec.exists()
         scannerExec.canExecute()
+        scannerExec.canRead()
         scannerExec.name == "SonarScanner.MSBuild.exe"
         def execRes = execDotnetApp(project, scannerExec)
         execRes.stdOutString.contains("Using the .NET Framework version of the Scanner for MSBuild")
