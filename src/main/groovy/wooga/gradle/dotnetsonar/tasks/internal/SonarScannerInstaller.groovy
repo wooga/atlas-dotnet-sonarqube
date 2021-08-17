@@ -10,7 +10,7 @@ class SonarScannerInstaller {
     //this executable only exists for .NET [4.6, 5)
     public static final String EXECUTABLE_NAME = "SonarScanner.MSBuild.exe";
     public static final String DOTNET_VERSION = "net46";
-    private static final String defaultBaseURL = "https://github.com/SonarSource/sonar-scanner-msbuild/releases/download"
+    public static final String defaultBaseURL = "https://github.com/SonarSource/sonar-scanner-msbuild/releases/download"
 
     private Downloader downloader
     private GradleUnzipper unzipper
@@ -24,7 +24,7 @@ class SonarScannerInstaller {
         this.downloader = downloader
     }
 
-    File install(String version, String dotnetVersion, File installationDir) {
+    File install(String version, String dotnetVersion=DOTNET_VERSION, File installationDir) {
         def scannerPkg = "sonar-scanner-msbuild-${version}-${dotnetVersion}.zip"
         def scannerURL = "${defaultBaseURL}/${version}/${scannerPkg}"
         return install(new URL(scannerURL), installationDir)
@@ -40,7 +40,7 @@ class SonarScannerInstaller {
         def zippedFile = new File(installationDir, "dotnet-sonarscanner.zip")
         downloader.download(source, zippedFile, true)
         unzipper.unzip(zippedFile, installationDir)
-
+        zippedFile.delete()
         def scannerFile = findScannerExecutableFile(installationDir)
         scannerFile.with {
             readable = true

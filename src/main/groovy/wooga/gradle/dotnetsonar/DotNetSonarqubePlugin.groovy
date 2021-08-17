@@ -8,9 +8,8 @@ import org.sonarqube.gradle.SonarQubeProperties
 import wooga.gradle.dotnetsonar.tasks.BuildSolution
 import wooga.gradle.dotnetsonar.tasks.SonarScannerBegin
 import wooga.gradle.dotnetsonar.tasks.SonarScannerEnd
-import wooga.gradle.dotnetsonar.tasks.SonarScannerInstall
 
-import static wooga.gradle.dotnetsonar.SonarScannerExtension.*
+import static SonarScannerExtension.*
 
 class DotNetSonarqubePlugin implements Plugin<Project> {
 
@@ -19,7 +18,9 @@ class DotNetSonarqubePlugin implements Plugin<Project> {
         def actionBroadcast = new ActionBroadcast<SonarQubeProperties>()
         def sonarScannerExt = project.extensions.create(SONARSCANNER_EXTENSION_NAME, SonarScannerExtension, project, actionBroadcast)
         def sonarQubeExt = project.extensions.create(SonarQubeExtension.SONARQUBE_EXTENSION_NAME, SonarQubeExtension, actionBroadcast)
-        sonarQubeExt.properties { it -> SonarScannerBegin.defaultSonarProperties(project, it) }
+        sonarQubeExt.properties { it ->
+            defaultSonarProperties(project, it)
+        }
 
         project.tasks.register(MS_BUILD_TASK_NAME, BuildSolution).configure { buildTask ->
             configureDefaultMSBuild(buildTask)
@@ -29,24 +30,33 @@ class DotNetSonarqubePlugin implements Plugin<Project> {
             configureDefaultDotNetBuild(buildTask)
         }
 
-        def installTask = project.tasks.register(INSTALL_TASK_NAME, SonarScannerInstall)
-        installTask.configure { sonarInstall ->
-            configureDefaultInstall(sonarInstall)
+        def beginTask = project.tasks.register(BEGIN_TASK_NAME, SonarScannerBegin) {beginTask ->
+            beginTask.sonarScanner.convention(sonarScannerExt.sonarScanner)
+            beginTask.sonarqubeProperties.convention(sonarScannerExt.sonarQubeProperties)
         }
-
-        def beginTask = project.tasks.register(BEGIN_TASK_NAME, SonarScannerBegin)
-        project.tasks.register(END_TASK_NAME, SonarScannerEnd)
-
-        project.tasks.withType(SonarScannerBegin).configureEach {
-            it.dependsOn(installTask)
+        project.tasks.register(END_TASK_NAME, SonarScannerEnd) { endTask ->
+            def tokenProvider = sonarScannerExt.sonarQubeProperties.map{it["sonar.login"].toString()}
+            endTask.sonarScanner.convention(sonarScannerExt.sonarScanner)
+            endTask.loginToken.convention(tokenProvider)
+            endTask.dependsOn(beginTask)
         }
 
         project.tasks.withType(BuildSolution).configureEach {
             sonarScannerExt.registerBuildTask(it)
         }
+    }
 
-        project.tasks.withType(SonarScannerEnd).configureEach {
-            it.dependsOn(beginTask)
+    static final void defaultSonarProperties(Project project, SonarQubeProperties properties) {
+        properties.with {
+            property("sonar.login", System.getenv('SONAR_TOKEN'))
+            property("sonar.host.url", System.getenv('SONAR_HOST'))
+            //would be better if this was associated to github repository, see atlas-plugins
+            property("sonar.projectKey", project.rootProject.name)
+            property("sonar.projectName", project.rootProject.name)
+            //property("sonar.sources", ".")
+            if(project.version != null) {
+                property("sonar.version", project.version.toString())
+            }
         }
     }
 }

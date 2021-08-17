@@ -1,6 +1,8 @@
 package wooga.gradle.dotnetsonar.tasks
 
 import org.gradle.process.internal.ExecException
+import spock.lang.Unroll
+import wooga.gradle.dotnetsonar.SonarScannerExtension
 import wooga.gradle.dotnetsonar.tasks.utils.PluginIntegrationSpec
 import wooga.gradle.dotnetsonar.utils.FakeExecutable
 
@@ -35,7 +37,60 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
         execResults.args.contains("-d:sonar.exclusions=src")
         !execResults.args.contains("-d:sonar.sources=")
         !execResults.args.contains("-d:sonar.prop=")
-        result.wasExecuted(":sonarScannerInstall")
+    }
+
+    def "task executes sonar scanner tool begin command with task properties"() {
+        given: "a sonar scanner executable"
+        def fakeSonarScannerExec = argReflectingFakeExecutable("sonarscanner", 0)
+        and: "a set up sonar scanner task"
+        buildFile << """
+        ${createSonarScannerFromExecutable("scanner", fakeSonarScannerExec)}
+        sonarScannerBegin {
+            sonarScanner.set(scanner)
+            sonarqubeProperties.put("sonar.projectKey", "key")
+            sonarqubeProperties.put("sonar.projectName", "name")
+            sonarqubeProperties.put("sonar.version", "0.0.1")
+            sonarqubeProperties.put("sonar.exclusions", "src")
+            sonarqubeProperties.put("sonar.prop", "value")
+        }
+        """
+        when: "running the sonarScannerBegin task"
+        def result = runTasksSuccessfully("sonarScannerBegin")
+        then:
+        def execResults = FakeExecutable.lastExecutionResults(result)
+        execResults.args.contains("-k:key")
+        execResults.args.contains("-v:0.0.1")
+        execResults.args.contains("-n:name")
+        execResults.args.contains("-d:sonar.exclusions=src")
+        execResults.args.contains("-d:sonar.prop=value")
+    }
+
+    @Unroll
+    def "task fails #key property isn't present"() {
+        given: "a sonar scanner executable"
+        def fakeSonarScannerExec = argReflectingFakeExecutable("sonarscanner", 0)
+        and: "a set up sonar scanner task without mandatory properties"
+        buildFile << """
+        ${createSonarScannerFromExecutable("scanner", fakeSonarScannerExec)}
+        sonarScannerBegin {
+            sonarScanner.set(scanner)
+        ${key=="sonar.projectKey"?
+                """sonarqubeProperties.put("sonar.version", "val")""":
+                """sonarqubeProperties.put("sonar.projectKey", "val")"""}
+            sonarqubeProperties.put("sonar.exclusions", "src")
+            sonarqubeProperties.put("sonar.prop", "value")
+        }
+        """
+        when: "running the sonarScannerBegin task"
+        def result = runTasksWithFailure("sonarScannerBegin")
+
+        then:
+        def e = rootCause(result.failure)
+        e instanceof IllegalArgumentException
+        e.message == "SonarqubeBegin needs a set ${key} property"
+
+        where:
+        key << ["sonar.projectKey", "sonar.version"]
     }
 
     def "task fails if sonar scanner tool begin command returns non-zero status"() {

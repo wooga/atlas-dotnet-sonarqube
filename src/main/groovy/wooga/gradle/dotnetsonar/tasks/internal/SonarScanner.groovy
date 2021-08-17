@@ -3,7 +3,7 @@ package wooga.gradle.dotnetsonar.tasks.internal
 import org.gradle.api.Project
 import org.gradle.process.ExecSpec
 
-class SonarScanner {
+class SonarScanner implements Serializable {
 
     static SonarScanner nativeBased(Project project, File executable, File workingDir) {
         return new SonarScanner(new GradleShell(project), executable, workingDir)
