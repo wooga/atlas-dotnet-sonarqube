@@ -7,7 +7,6 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import wooga.gradle.dotnetsonar.SonarScannerExtension
-import wooga.gradle.dotnetsonar.tasks.internal.SonarScanner
 import wooga.gradle.dotnetsonar.tasks.internal.SonarScannerInstaller
 
 class SonarScannerInstall extends DefaultTask {
@@ -39,21 +38,21 @@ class SonarScannerInstall extends DefaultTask {
     @TaskAction
     def run() {
         SonarScannerExtension sonarScannerExt = project.extensions.getByType(SonarScannerExtension)
-        sonarScannerExt.sonarScanner = downloadSonarScanner()
+        def scannerExec = downloadSonarScannerFiles()
+        sonarScannerExt.sonarScanner = sonarScannerExt.createSonarScanner(scannerExec)
     }
 
-    private SonarScanner downloadSonarScanner() {
+    private File downloadSonarScannerFiles() {
         def version = version.get()
         def dotnetVersion = SonarScannerInstaller.DOTNET_VERSION
         def installationDir = installationDir.map{it.dir("sonarscanner-${version}")}.get()
         def scannerInstaller = SonarScannerInstaller.gradleBased(project)
 
-        def scannerExec = sourceURL.map{urlStr ->
+        return sourceURL.map{urlStr ->
             scannerInstaller.install(new URL(urlStr), installationDir.asFile)
         }.orElse(
                 project.provider { scannerInstaller.install(version, dotnetVersion, installationDir.asFile) }
         ).get()
-        return SonarScanner.gradleBased(project, scannerExec, project.projectDir)
     }
 
     @Input @Optional

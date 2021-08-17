@@ -18,7 +18,7 @@ class FakeShell implements Shell {
     }
 
     @Override
-    ShellResult execute(boolean logging=false, Closure execSpecClosure) {
+    ShellResult execute(boolean logging=true, Closure execSpecClosure) {
         ExecSpec spec = new DefaultExecSpec(SpecFakes.fakeResolver())
         execSpecClosure(spec)
         this.lastExecSpec = spec

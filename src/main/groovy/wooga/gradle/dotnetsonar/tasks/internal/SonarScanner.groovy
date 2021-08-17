@@ -5,24 +5,19 @@ import org.gradle.process.ExecSpec
 
 class SonarScanner {
 
+    static SonarScanner nativeBased(Project project, File executable, File workingDir) {
+        return new SonarScanner(new GradleShell(project), executable, workingDir)
+    }
+
+    static SonarScanner monoBased(Project project, File executable, File monoExecutable, File workingDir) {
+        return new SonarScanner(GradleMonoShell.forProject(project, monoExecutable), executable, workingDir)
+    }
 
     private Shell shell;
     private File executable;
     private File workingDir;
 
-    static Optional<SonarScanner> fromPath(Project project, File workingDir) {
-        Shell shell = new GradleShell(project)
-        def maybeExecutable = OSOps.findInOSPath(shell, SonarScannerInstaller.EXECUTABLE_NAME)
-        return maybeExecutable.map{
-            executable -> new SonarScanner(shell, executable, workingDir)
-        }
-    }
-
-    static SonarScanner gradleBased(Project project, File executable, File workingDir) {
-        return new SonarScanner(new GradleShell(project), executable, workingDir)
-    }
-
-    SonarScanner(Shell shell, File executable, File workingDir) {
+    private SonarScanner(Shell shell, File executable, File workingDir) {
         this.shell = shell
         this.executable = executable
         this.workingDir = workingDir

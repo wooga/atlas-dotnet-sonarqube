@@ -41,7 +41,8 @@ class SonarScannerBegin extends DefaultTask {
     def run() {
         def sonarScannerExt = project.extensions.getByType(SonarScannerExtension)
         def sonarQubeProperties = sonarScannerExt.sonarQubeProperties
-        def sonarScanner = sonarScannerExt.sonarScanner.orElseThrow {
+        def sonarScanner = sonarScannerExt.sonarScanner.getOrNull()
+        if(sonarScanner == null) {
             throw new IllegalStateException("couldn't find SonarScanner on Gradle nor its executable on PATH")
         }
         assertKeyOnMap(sonarQubeProperties, "sonar.projectKey")

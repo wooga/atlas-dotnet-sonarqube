@@ -63,7 +63,8 @@ class SonarScannerSpec extends Specification {
         given: "a Sonar Scanner executable with a working dir"
         File scannerExec = new File("sonarscanner.exe")
         File workingDir = new File("a_dir")
-        and: "some sonarqube properties"
+        and: "a sonarqube login token"
+        def sonarToken = "token"
         and: "a shell executor"
         def shell = fakeShell()
 
@@ -75,8 +76,5 @@ class SonarScannerSpec extends Specification {
         shell.lastExecSpec.executable == scannerExec.absolutePath
         shell.lastExecSpec.workingDir == workingDir
         shell.lastExecSpec.args == ["end", "-d:sonar.login=${sonarToken}"]
-
-        where:
-        sonarToken << ["token"]
     }
 }

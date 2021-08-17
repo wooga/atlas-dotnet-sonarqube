@@ -13,7 +13,7 @@ class SonarScannerExtensionIntegrationSpec extends PluginIntegrationSpec {
         File fakeScannerExec = SpecFakes.argReflectingFakeExecutable("sonarscanner")
         and: "custom task registering itself on sonar scanner extension"
         buildFile << """
-        ${forceAddSonarScannerObjectToExtension(fakeScannerExec)}
+        ${forceAddObjectsToExtension(fakeScannerExec)}
         ${setupSonarScannerExtension("sonarScannerExt")}
         tasks.register("custom") {
             sonarScannerExt.registerBuildTask(it)

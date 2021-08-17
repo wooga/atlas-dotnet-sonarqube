@@ -7,8 +7,7 @@ import spock.lang.Unroll
 
 import java.nio.file.Paths
 
-import static wooga.gradle.dotnetsonar.utils.SpecUtils.blocksWindowsFile
-import static wooga.gradle.dotnetsonar.utils.SpecUtils.emptyTmpFile
+import static wooga.gradle.dotnetsonar.utils.SpecUtils.*
 
 class OSOpsSpec extends ProjectSpec {
 
@@ -20,7 +19,7 @@ class OSOpsSpec extends ProjectSpec {
     }
 
     @Unroll
-    @IgnoreIf({ !System.getProperty("os.name").toLowerCase().contains("windows") })
+    @IgnoreIf({ !isWindows() })
     def "finds external executable #filename on windows path"() {
         given: "a windows OS"
         and: "a executable file name"
@@ -42,7 +41,7 @@ class OSOpsSpec extends ProjectSpec {
     }
 
     @Unroll
-    @IgnoreIf({ System.getProperty("os.name").toLowerCase().contains("windows") })
+    @IgnoreIf({ isWindows() })
     def "finds external executable #filename on unix path"() {
         given: "a unix OS"
         and: "a executable file name"
@@ -64,7 +63,7 @@ class OSOpsSpec extends ProjectSpec {
 
     //https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/unblock-file?view=powershell-7.1
     @Unroll
-    @IgnoreIf({ !System.getProperty("os.name").toLowerCase().contains("windows") })
+    @IgnoreIf({ !isWindows() })
     def "unblocks #file windows file"() {
         given: "a blocked NTFS windows file"
         if(blocked) {
@@ -88,7 +87,7 @@ class OSOpsSpec extends ProjectSpec {
         emptyTmpFile("normalFile.bat")     | false
     }
 
-    @IgnoreIf({ !System.getProperty("os.name").toLowerCase().contains("windows") })
+    @IgnoreIf({ !isWindows() })
     def "fails when unblocking non-existing windows file"() {
         given: "inexistent windows file"
         def falseFile = new File("imnothere")
