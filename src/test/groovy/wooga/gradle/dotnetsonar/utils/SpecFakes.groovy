@@ -9,7 +9,6 @@ import static SpecUtils.isWindows
 
 class SpecFakes {
 
-
     static File argReflectingFakeExecutable(String fakeFilePath, exitCode = 0) {
         String osAwareFakePath = isWindows() && !fakeFilePath.endsWith(".bat")?
                                     "${fakeFilePath}.bat" :
@@ -18,6 +17,16 @@ class SpecFakes {
         fakeExecFile.deleteOnExit()
         return fakeExecFile
     }
+
+    static File runFirstParameterFakeExecutable(String fakeFilePath) {
+        String osAwareFakePath = isWindows() && !fakeFilePath.endsWith(".bat")?
+                "${fakeFilePath}.bat" :
+                fakeFilePath
+        def fakeExecFile = FakeExecutable.runFirstParam(Paths.get(osAwareFakePath))
+        fakeExecFile.deleteOnExit()
+        return fakeExecFile
+    }
+
 
     static PathToFileResolver fakeResolver() {
         return new PathToFileResolver() {

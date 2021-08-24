@@ -14,7 +14,7 @@ class SonarScannerEndTaskIntegrationSpec extends PluginIntegrationSpec {
         and: "a sonar scanner executable"
         def fakeSonarScannerExec = argReflectingFakeExecutable("sonarscanner", 0)
         and: "a set up sonar scanner extension"
-        buildFile << forceAddSonarScannerObjectToExtension(fakeSonarScannerExec)
+        buildFile << forceAddObjectsToExtension(fakeSonarScannerExec)
         and: "a configurated sonarqube extension"
         def loginToken = "loginToken"
         buildFile << """
@@ -39,7 +39,7 @@ class SonarScannerEndTaskIntegrationSpec extends PluginIntegrationSpec {
         given: "a failing sonar scanner executable"
         def fakeSonarScannerExec = argReflectingFakeExecutable("sonarscanner", 1)
         and: "a set up sonar scanner extension"
-        buildFile << forceAddSonarScannerObjectToExtension(fakeSonarScannerExec)
+        buildFile << forceAddObjectsToExtension(fakeSonarScannerExec)
 
         when: "running the sonarScannerEnd task"
         def result = runTasksWithFailure("sonarScannerEnd")
@@ -47,7 +47,6 @@ class SonarScannerEndTaskIntegrationSpec extends PluginIntegrationSpec {
         then: "should fail on execution with non-zero exit value"
         def e = rootCause(result.failure)
         e.getClass().name == ExecException.name
-        e.message.contains(fakeSonarScannerExec.absolutePath)
         e.message.contains("exit value 1")
     }
 

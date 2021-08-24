@@ -20,7 +20,8 @@ class SonarScannerEnd extends DefaultTask {
     @TaskAction
     def run() {
         def sonarScannerExt = project.extensions.getByType(SonarScannerExtension)
-        def sonarScanner = sonarScannerExt.sonarScanner.orElseThrow {
+        def sonarScanner = sonarScannerExt.sonarScanner.getOrNull()
+        if(sonarScanner == null) {
             throw new IllegalStateException("couldn't find SonarScanner on Gradle nor its executable on PATH")
         }
 

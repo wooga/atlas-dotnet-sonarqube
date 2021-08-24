@@ -15,7 +15,7 @@ class BuildSolutionTaskIntegrationSpec extends PluginIntegrationSpec {
 
     def setup() {
         def fakeSonarScannerExec = argReflectingFakeExecutable("sonarscanner", 0)
-        buildFile << forceAddSonarScannerObjectToExtension(fakeSonarScannerExec)
+        buildFile << forceAddObjectsToExtension(fakeSonarScannerExec)
     }
 
     @Unroll
