@@ -2,65 +2,62 @@ package wooga.gradle.dotnetsonar.tasks
 
 
 import org.gradle.api.DefaultTask
-import org.gradle.api.Project
+import org.gradle.api.provider.MapProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
-import org.sonarqube.gradle.ActionBroadcast
-import org.sonarqube.gradle.SonarQubeProperties
-import wooga.gradle.dotnetsonar.SonarScannerExtension
+import wooga.gradle.dotnetsonar.tasks.internal.SonarScanner
 
 class SonarScannerBegin extends DefaultTask {
 
-    static final void defaultSonarProperties(Project project, SonarQubeProperties properties) {
-        properties.with {
-            property("sonar.login", System.getenv('SONAR_TOKEN'))
-            property("sonar.host.url", System.getenv('SONAR_HOST'))
-            //would be better if this was associated to github repository, see atlas-plugins
-            property("sonar.projectKey", project.rootProject.name)
-            property("sonar.projectName", project.rootProject.name)
-            //property("sonar.sources", ".")
-            if(project.version != null) {
-                property("sonar.version", project.version.toString())
-            }
-        }
-    }
+    private final Property<SonarScanner> sonarScanner;
+    private final MapProperty<String, Object> sonarqubeProperties;
 
-    static final void unityDefaultProperties(Project project, SonarQubeProperties properties) {
-        defaultSonarProperties(project, properties)
-        properties.with {
-            property("sonar.login", System.getenv('SONAR_TOKEN'))
-            property("sonar.host.url", System.getenv('SONAR_HOST'))
-            property("sonar.exclusions", "Assets/Paket.Unity3D/**")
-            property("sonar.cpd.exclusions", "Assets/Tests/**")
-            property("sonar.coverage.exclusions", "Assets/Tests/**")
-            property("sonar.cs.nunit.reportsPaths", "build/reports/unity/*/*.xml")
-            property("sonar.cs.opencover.reportsPaths", "build/codeCoverage/**/*.xml")
-        }
+    SonarScannerBegin() {
+        this.sonarScanner = project.objects.property(SonarScanner)
+        this.sonarqubeProperties = project.objects.mapProperty(String, Object)
     }
 
     @TaskAction
     def run() {
-        def sonarScannerExt = project.extensions.getByType(SonarScannerExtension)
-        def sonarQubeProperties = sonarScannerExt.sonarQubeProperties
-        def sonarScanner = sonarScannerExt.sonarScanner.getOrNull()
-        if(sonarScanner == null) {
-            throw new IllegalStateException("couldn't find SonarScanner on Gradle nor its executable on PATH")
-        }
-        assertKeyOnMap(sonarQubeProperties, "sonar.projectKey")
-        assertKeyOnMap(sonarQubeProperties, "sonar.version")
+        def properties = sonarqubeProperties.get()
+        def sonarScanner = sonarScanner.get()
+        assertKeyOnMap(properties, "sonar.projectKey")
+        assertKeyOnMap(properties, "sonar.version")
         sonarScanner.begin(
-                sonarQubeProperties["sonar.projectKey"].toString(),
-                sonarQubeProperties["sonar.projectName"].toString(),
-                sonarQubeProperties["sonar.version"]?.toString(),
-                sonarQubeProperties)
+                properties["sonar.projectKey"].toString(),
+                properties["sonar.projectName"].toString(),
+                properties["sonar.version"]?.toString(),
+                properties)
     }
 
     private static <T> void assertKeyOnMap(Map<T,?> map, T key) {
         if(!map.containsKey(key)) {
-            throw new IllegalArgumentException("SonarqubeBegin needs a set ${key} property on the sonarqube extension")
+            throw new IllegalArgumentException("SonarqubeBegin needs a set ${key} property")
         }
     }
 
-    void setActionBroadcast(ActionBroadcast<SonarQubeProperties> actionBroadcast) {
-        this.actionBroadcast = actionBroadcast
+    @Input
+    Property<SonarScanner> getSonarScanner() {
+        return sonarScanner
     }
+
+    @Input
+    MapProperty<String, Object> getSonarqubeProperties() {
+
+        return sonarqubeProperties
+    }
+
+    void setSonarScanner(SonarScanner sonarScanner) {
+        this.sonarScanner.set(sonarScanner)
+    }
+
+    void setSonarqubeProperties(MapProperty<String, Object> sonarqubeProperties) {
+        this.sonarqubeProperties.set(sonarqubeProperties)
+    }
+
+    void setSonarqubeProperties(Map<String, Object> sonarqubeProperties) {
+        this.sonarqubeProperties.set(sonarqubeProperties)
+    }
+
 }

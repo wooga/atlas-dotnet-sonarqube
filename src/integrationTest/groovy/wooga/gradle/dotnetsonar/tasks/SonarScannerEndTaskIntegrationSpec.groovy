@@ -9,7 +9,7 @@ import static wooga.gradle.dotnetsonar.utils.SpecUtils.rootCause
 
 class SonarScannerEndTaskIntegrationSpec extends PluginIntegrationSpec {
 
-    def "executes sonar scanner tool end command"() {
+    def "executes sonar scanner tool end command with extension properties"() {
         given: "a applied dotnet sonar scanner plugin"
         and: "a sonar scanner executable"
         def fakeSonarScannerExec = argReflectingFakeExecutable("sonarscanner", 0)
@@ -34,6 +34,32 @@ class SonarScannerEndTaskIntegrationSpec extends PluginIntegrationSpec {
         def execResult = FakeExecutable.lastExecutionResults(result)
         execResult.args == ["end", "-d:sonar.login=${loginToken}"]
     }
+
+    def "executes sonar scanner tool end command with task properties"() {
+        given: "a applied dotnet sonar scanner plugin"
+        and: "a sonar scanner executable"
+        def fakeSonarScannerExec = argReflectingFakeExecutable("sonarscanner", 0)
+        and: "a set up sonar scanner extension (for sonarScannerBegin task)"
+        buildFile << forceAddObjectsToExtension(fakeSonarScannerExec)
+        and: "a configurated sonarScannerEnd task"
+        def loginToken = "loginToken"
+        buildFile << """
+        ${createSonarScannerFromExecutable("scanner", fakeSonarScannerExec)}
+        sonarScannerEnd {
+            sonarScanner.set(scanner)
+            loginToken = "${loginToken}"
+        }
+        """
+        when: "running sonarScannerEnd task"
+        def result = runTasksSuccessfully("sonarScannerEnd")
+
+        then: "executes sonar scanner begin task"
+        result.wasExecuted(":sonarScannerBegin")
+        and: "executes sonar scanner tool end command with sonarscanner extension login property"
+        def execResult = FakeExecutable.lastExecutionResults(result)
+        execResult.args == ["end", "-d:sonar.login=${loginToken}"]
+    }
+
 
     def "task fails if sonar scanner tool end command returns non-zero status"() {
         given: "a failing sonar scanner executable"
