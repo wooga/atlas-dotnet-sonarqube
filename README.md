@@ -1,14 +1,6 @@
 atlas-dotnet-sonarqube
 =============
 
-![Wooga Internal](https://img.shields.io/badge/wooga-internal-lightgray.svg?style=flat-square)
-[![Gradle Plugin ID](https://img.shields.io/badge/gradle-net.wooga.github-brightgreen.svg?style=flat-square)](https://plugins.gradle.org/plugin/net.wooga.plugins)
-[![Build Status](https://img.shields.io/travis/wooga/atlas-plugins/master.svg?style=flat-square)](https://travis-ci.org/wooga/atlas-plugins)
-[![Coveralls Status](https://img.shields.io/coveralls/wooga/atlas-plugins/master.svg?style=flat-square)](https://coveralls.io/github/wooga/atlas-plugins?branch=master)
-[![Apache 2.0](https://img.shields.io/badge/license-Apache%202-blue.svg?style=flat-square)](https://raw.githubusercontent.com/wooga/atlas-plugins/master/LICENSE)
-[![GitHub tag](https://img.shields.io/github/tag/wooga/atlas-plugins.svg?style=flat-square)]()
-[![GitHub release](https://img.shields.io/github/release/wooga/atlas-plugins.svg?style=flat-square)]()
-
 This plugin wraps over [sonarscanner for .NET](https://docs.sonarqube.org/latest/analysis/scan/sonarscanner-for-msbuild/) providing sonarqube scan functionality for gradle dotnet projects. It tries to find a sonarscanner executable on PATH, and downloads it if none are found.
 
 SonarScanner for .NET requires a build to be run during its execution, either the `dotnet` or `MSBuild` applications can be used.
@@ -58,16 +50,20 @@ solutionDotnetBuild {
 The analysis itself will be run when calling any `BuildSolution`-derivated task. Keep in mind that it doesn't run tests or creates coverage files, so make sure that those already exists and are indicated by the adequate Sonarqube properties.
 If you wish to run each sonarscanner step by yourself, you can use the `sonarScannerBegin` and `sonarScannerEnd` to call the begin and end steps for [SonarScanner for .NET](https://docs.sonarqube.org/latest/analysis/scan/sonarscanner-for-msbuild/), respectively.
 
+If you wish to provide your own SonarScanner for .NET instance, or to use mono, you can specify this using the `sonarScanner` extension.
+
+```groovy
+sonarScanner {
+  sonarScannerExecutable = file("path/to/dotnet/sonarscanner/executable")
+  monoExecutable = file("path/to/mono/executable")
+  useMono = true //or false (default for windows and MacOS) if you want to try to execute dotnet applications (like SonarScanner or the builders themselves) natively.
+}
+```
+
 ### Testing/Development
 
 The resulting project structure is prepared as a normal groovy gradle plugin. Additional to the normal `test` task the plugin also adds a `integrationTest` task with code coverage and reporting. As test framework `Spock` will be added to the classpath. The jocoo plugin is used for code coverage. The integration test results are merged with the unit test results. All our plugins push the coverage report to coveralls. The coveralls plugin is connected to jacoco and only needs the `COVERALLS_TOKEN` in the environment. The plugin will also generate an idea project with the integration tests configured as seperate module1
 The tasks `final` and `candidate` will publish the plugin to the gradle plugins repository with the help of the `plugin-publish` plugin and create a formal gitub release with the `net.wooga.github` plugin. The `snapshot` task will only publish to the local maven repository.
-
-Documentation
-=============
-
-- [API docs](https://wooga.github.io/atlas-plugins/docs/api/)
-- [Release Notes](RELEASE_NOTES.md)
 
 Gradle and Java Compatibility
 =============================
