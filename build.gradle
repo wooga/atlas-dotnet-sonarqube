@@ -40,10 +40,14 @@ repositories {
     mavenCentral()
 }
 
+githubPublish {
+    targetCommitish.set(null)
+}
+
 github {
     repositoryName = "wooga/atlas-dotnet-sonarqube"
 }
 
 dependencies {
-    implementation 'org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:3.2.0'
+    api 'org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:3.2.0'
 }
