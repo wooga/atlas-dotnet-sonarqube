@@ -2,6 +2,7 @@ package wooga.gradle.dotnetsonar.tasks
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -39,6 +40,7 @@ class BuildSolution extends DefaultTask {
     private RegularFileProperty dotnetExecutable
     private RegularFileProperty solution
     private MapProperty<String, ?> environment
+    private ListProperty<String> extraArgs
 
     BuildSolution() {
         this.buildTool = project.objects.property(SolutionBuildTool)
@@ -46,6 +48,7 @@ class BuildSolution extends DefaultTask {
         this.dotnetExecutable = project.objects.fileProperty()
         this.solution = project.objects.fileProperty()
         this.environment = project.objects.mapProperty(String, Object)
+        this.extraArgs = project.objects.listProperty(String)
     }
 
     @TaskAction
@@ -54,7 +57,7 @@ class BuildSolution extends DefaultTask {
                 orElse(dotnetExecutable.map{DotNet.gradleBased(getProject(), it.asFile)}).
                 orElse(msBuildExecutable.map{MSBuild.gradleBased(getProject(), it.asFile)}).
                 get()
-        resolvedBuildTool.buildSolution(solution.get().asFile, environment.get())
+        resolvedBuildTool.buildSolution(solution.get().asFile, environment.get(), extraArgs.getOrElse([]))
     }
 
     @Input
@@ -65,6 +68,11 @@ class BuildSolution extends DefaultTask {
     @Optional @Input
     MapProperty<String, ?> getEnvironment() {
         return environment
+    }
+
+    @Optional @Input
+    ListProperty<String> getExtraArgs() {
+        return extraArgs
     }
 
     @Input @Optional
@@ -92,6 +100,10 @@ class BuildSolution extends DefaultTask {
 
     void setEnvironment(Map<String, ?> environment) {
         this.environment.set(environment)
+    }
+
+    void setExtraArgs(List<String> extraArgs) {
+        this.extraArgs.set(extraArgs)
     }
 
     void addEnvironment(String key, Object value) {

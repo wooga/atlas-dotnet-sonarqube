@@ -1,10 +1,12 @@
 package wooga.gradle.dotnetsonar.tasks.internal
 
 import spock.lang.Specification
+import spock.lang.Unroll
 import wooga.gradle.dotnetsonar.utils.FakeShell
 
 class MSBuildSpec extends Specification {
 
+    @Unroll
     def "sets up execution specifications to build a solution with given MSBuild executable"() {
         given: "a MSBuild executable"
         def executable = new File(executablePath)
@@ -16,15 +18,19 @@ class MSBuildSpec extends Specification {
 
         when: "setting up specification"
         def msbuild = new MSBuild(shell, executable)
-        msbuild.buildSolution(solution, environment)
+        msbuild.buildSolution(solution, environment, extraArgs)
 
         then:
         shell.lastExecSpec.executable == executable.absolutePath
-        shell.lastExecSpec.args == [solution.absolutePath]
-        shell.lastExecSpec.environment["envVar"] == "envValue"
+        shell.lastExecSpec.args == extraArgs + [solution.absolutePath]
+        shell.lastExecSpec.environment.entrySet().containsAll(environment.entrySet())
 
         where:
-        executablePath  | solutionPath  | environment
-        "msbuild.exe"   |"solution.sln" | [envVar: "envValue"]
+        executablePath | solutionPath   | environment          | extraArgs
+        "msbuild.exe"  | "solution.sln" | [:]                  | []
+        "msbuild.exe"  | "solution.sln" | [envVar: "envValue"] | []
+        "msbuild.exe"  | "solution.sln" | [envVar: "envValue"] | ["-arg"]
+        "msbuild.exe"  | "solution.sln" | [envVar: "envValue"] | ["/arg"]
+        "msbuild.exe"  | "solution.sln" | [envVar: "envValue"] | ["/arg", "-arg:value"]
     }
 }
