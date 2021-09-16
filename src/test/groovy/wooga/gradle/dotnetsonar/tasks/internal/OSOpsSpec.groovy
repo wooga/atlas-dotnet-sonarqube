@@ -2,7 +2,6 @@ package wooga.gradle.dotnetsonar.tasks.internal
 
 import nebula.test.ProjectSpec
 import spock.lang.IgnoreIf
-import spock.lang.Shared
 import spock.lang.Unroll
 
 import java.nio.file.Paths
@@ -11,11 +10,49 @@ import static wooga.gradle.dotnetsonar.utils.SpecUtils.*
 
 class OSOpsSpec extends ProjectSpec {
 
-    @Shared
-    private Shell shell
+    @Unroll
+    @IgnoreIf({ isWindows() })
+    def "finds external executable with unix filename #filename on path"() {
+        given: "a unix OS"
+        and: "a executable file name"
+        when: "searching for executable file name on path"
+        def maybeFile = OSOps.findInOSPath(project, "win${filename}", filename)
 
-    def setup() {
-        shell = new GradleShell(project)
+        then: "return existing java.io.File object representing it"
+        maybeFile.present == exists
+        if(exists) {
+            maybeFile.get().exists()
+            maybeFile.get().name.endsWith(filename)
+        }
+
+        where:
+        filename | exists
+        "sh"     | true
+        "another"| false
+    }
+
+
+    @Unroll
+    @IgnoreIf({ !isWindows() })
+    def "finds external executable with windows filename #filename on path"() {
+        given: "a unix OS"
+        and: "a executable file name"
+        when: "searching for executable file name on path"
+        def maybeFile = OSOps.findInOSPath(project, filename, "unix${filename}")
+
+        then: "return existing java.io.File object representing it"
+        maybeFile.present == exists
+        if (exists) {
+            maybeFile.get().exists()
+            maybeFile.get().name.endsWith(filename)
+        }
+
+        where:
+        filename | exists
+        "cmd.exe"| true
+        "cmd"    | true
+        "asd.exe"| false
+        "asd"    | false
     }
 
     @Unroll
@@ -24,7 +61,7 @@ class OSOpsSpec extends ProjectSpec {
         given: "a windows OS"
         and: "a executable file name"
         when: "searching for executable file name on path"
-        def maybeFile = OSOps.findInOSPath(new GradleShell(project), filename)
+        def maybeFile = OSOps.findInOSPath(project, filename)
 
         then: "return existing java.io.File object representing it"
         maybeFile.present == exists
@@ -46,7 +83,7 @@ class OSOpsSpec extends ProjectSpec {
         given: "a unix OS"
         and: "a executable file name"
         when: "searching for executable file name on path"
-        def maybeFile = OSOps.findInOSPath(new GradleShell(project), filename)
+        def maybeFile = OSOps.findInOSPath(project, filename)
 
         then: "return existing java.io.File object representing it"
         maybeFile.present == exists
@@ -66,11 +103,12 @@ class OSOpsSpec extends ProjectSpec {
     @IgnoreIf({ !isWindows() })
     def "unblocks #file windows file"() {
         given: "a blocked NTFS windows file"
+        def shell = new GradleShell(project)
         if(blocked) {
             blocksWindowsFile(shell, file)
         }
         when: "file is unblocked via powershell"
-        OSOps.unblockFile(new GradleShell(project), file)
+        OSOps.unblockFile(shell, file)
 
         then: "NTFS lock stream file is gone"
         def parentDir = Paths.get(file.absolutePath).parent.toString()

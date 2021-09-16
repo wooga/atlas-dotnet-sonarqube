@@ -17,7 +17,7 @@ class BuildSolution extends DefaultTask {
     static void configureDefaultMSBuild(BuildSolution buildTask) {
         def projectDir = buildTask.project.layout.projectDirectory
         buildTask.with {
-            OSOps.findInOSPath(buildTask.project, "MSBuild.exe").ifPresent {msbuildExec ->
+            OSOps.findInOSPath(buildTask.project, "MSBuild.exe", "msbuild").ifPresent {msbuildExec ->
                 msBuildExecutable.convention(projectDir.file(msbuildExec.absolutePath))
             }
             solution.convention(projectDir.file("${project.name}.sln"))
