@@ -2,6 +2,9 @@ package wooga.gradle.dotnetsonar.tasks.internal
 
 import nebula.test.ProjectSpec
 
+import java.nio.file.Files
+import java.nio.file.Paths
+
 import static wooga.gradle.dotnetsonar.utils.SpecUtils.execDotnetApp
 
 class SonarScannerInstallerSpec extends ProjectSpec {
@@ -27,5 +30,9 @@ class SonarScannerInstallerSpec extends ProjectSpec {
         def execRes = execDotnetApp(project, scannerExec)
         execRes.stdOutString.contains("Using the .NET Framework version of the Scanner for MSBuild")
         execRes.execResult.exitValue == 1
+        and: "sonar scanner inner binaries should be able to execute"
+        Files.walk(Paths.get(installDir.absolutePath)).
+                filter {it.toFile().isFile() && it.parent.fileName.toString() == "bin"}.
+                allMatch {it.toFile().exists() && it.toFile().canExecute() && it.toFile().canRead()}
     }
 }

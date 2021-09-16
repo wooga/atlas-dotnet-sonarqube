@@ -4,6 +4,7 @@ import org.gradle.api.Project
 
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.stream.Collectors
 
 class SonarScannerInstaller {
 
@@ -41,23 +42,24 @@ class SonarScannerInstaller {
         downloader.download(source, zippedFile, true)
         unzipper.unzip(zippedFile, installationDir)
         zippedFile.delete()
-        def scannerFile = findScannerExecutableFile(installationDir)
-        scannerFile.with {
-            readable = true
-            executable = true
+        def executableFiles = findScannerExecutableFiles(installationDir)
+        executableFiles.every {
+            it.readable = true
+            it.executable = true
         }
-
-        return scannerFile
+        def sonarScannerExecutable = executableFiles.find{it.absolutePath.endsWith(EXECUTABLE_NAME)}
+        return Optional.ofNullable(sonarScannerExecutable).orElseThrow {
+            new FileNotFoundException("Couldn't find sonar-scanner executable in installed package")
+        }
     }
 
-    private static File findScannerExecutableFile(File installationDir) {
+    private static File[] findScannerExecutableFiles(File installationDir) {
         def installedFiles = Files.walk(Paths.get(installationDir.absolutePath))
-        def maybeScannerExec = installedFiles.filter { path ->
+        return installedFiles.filter { path ->
             def file = path.toFile()
-            return file.isFile() && file.absolutePath.endsWith(EXECUTABLE_NAME)
-        }.findFirst()
-        return maybeScannerExec.orElseThrow {
-            new FileNotFoundException("Couldn't find sonar-scanner executable in installed package")
-        }.toFile()
+            def isBaseExecutable = file.isFile() && file.absolutePath.endsWith(EXECUTABLE_NAME)
+            def isFromBinFolder = file.isFile() && path.parent.fileName.toString() == "bin"
+            return isBaseExecutable || isFromBinFolder
+        }.map{it.toFile()}.collect(Collectors.toList())
     }
 }
