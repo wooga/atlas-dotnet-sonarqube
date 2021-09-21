@@ -28,6 +28,7 @@ class BuildSolutionTaskIntegrationSpec extends PluginIntegrationSpec {
             ${tool}Executable = ${wrapValueBasedOnType(fakeBuildExec.absolutePath, File)}
             solution = ${wrapValueBasedOnType(solutionPath, File)}
             environment = ${wrapValueBasedOnType(environment, Map)}
+            extraArgs = ${wrapValueBasedOnType(extraArgs, List)}
         }
         """
         when:
@@ -35,14 +36,15 @@ class BuildSolutionTaskIntegrationSpec extends PluginIntegrationSpec {
 
         then:
         def buildResult = executionResults(fakeBuildExec, result)
-        buildResult.args == subtool + [Paths.get(projectDir.absolutePath, solutionPath).toString()]
-        environment.every {expected ->
-            buildResult.envs.find { actual -> expected == actual}
-        }
+        buildResult.args == subtool + extraArgs + [Paths.get(projectDir.absolutePath, solutionPath).toString()]
+        buildResult.envs.entrySet().containsAll(environment.entrySet())
+
         where:
-        tool        |solutionPath       | subtool   | environment
-        "msBuild"   |"solution.sln"     | []        | ["a": "b"]
-        "dotnet"    |"dir/solution.sln" | ["build"] | []
+        tool      | solutionPath       | subtool   | environment | extraArgs
+        "msBuild" | "solution.sln"     | []        | ["a": "b"]  | []
+        "msBuild" | "solution.sln"     | []        | [:]         | ["-arg", "/arg:value"]
+        "dotnet"  | "dir/solution.sln" | ["build"] | [:]         | []
+        "dotnet"  | "dir/solution.sln" | ["build"] | ["b": "c"]  | ["-arg", "/arg:value"]
     }
 
     @Unroll

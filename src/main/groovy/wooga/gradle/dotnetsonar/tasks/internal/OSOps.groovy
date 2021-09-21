@@ -11,6 +11,14 @@ class OSOps {
         return osName.contains("windows")
     }
 
+    static Optional<File> findInOSPath(Project project, String windowsFileName, String unixFileName) {
+        if(isWindows()) {
+            return findInOSPath(project, windowsFileName)
+        } else {
+            return findInOSPath(project, unixFileName)
+        }
+    }
+
     static Optional<File> findInOSPath(Project project, String fileName) {
         return findInOSPath(new GradleShell(project), fileName)
     }
@@ -30,7 +38,7 @@ class OSOps {
         }
         result.execResult.rethrowFailure()
         if(result.execResult.exitValue == 0) {
-            return Optional.of(new File(result.stdOutString.trim()))
+            return Optional.of(new File(result.stdOutString.readLines()[0].trim()))
         } else {
             return Optional.empty()
         }

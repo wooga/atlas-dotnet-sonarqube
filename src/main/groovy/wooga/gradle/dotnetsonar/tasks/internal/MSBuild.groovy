@@ -15,10 +15,11 @@ class MSBuild implements SolutionBuildTool {
         this.executable = executable
     }
 
-    public void buildSolution(File solution, Map<String, ?> environment = new HashMap<>()) {
+    public void buildSolution(File solution, Map<String, ?> environment = new HashMap<>(), List<?> extraArgs=[]) {
         shell.execute { execSpec ->
             execSpec.executable = executable.absolutePath
             execSpec.environment(environment)
+            execSpec.args(*extraArgs)
             execSpec.args(solution.absolutePath)
         }.throwsOnFailure()
     }
