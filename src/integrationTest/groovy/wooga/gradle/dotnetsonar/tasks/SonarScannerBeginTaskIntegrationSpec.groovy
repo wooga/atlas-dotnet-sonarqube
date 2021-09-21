@@ -1,8 +1,12 @@
 package wooga.gradle.dotnetsonar.tasks
 
+import com.wooga.spock.extensions.github.GithubRepository
+import com.wooga.spock.extensions.github.Repository
+import com.wooga.spock.extensions.github.api.RateLimitHandlerWait
+import com.wooga.spock.extensions.github.api.TravisBuildNumberPostFix
+import org.ajoberstar.grgit.Grgit
 import org.gradle.process.internal.ExecException
 import spock.lang.Unroll
-import wooga.gradle.dotnetsonar.SonarScannerExtension
 import wooga.gradle.dotnetsonar.tasks.utils.PluginIntegrationSpec
 import wooga.gradle.dotnetsonar.utils.FakeExecutable
 
@@ -11,12 +15,63 @@ import static wooga.gradle.dotnetsonar.utils.SpecUtils.rootCause
 
 class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
 
+    @GithubRepository(
+            usernameEnv = "ATLAS_GITHUB_INTEGRATION_USER",
+            tokenEnv = "ATLAS_GITHUB_INTEGRATION_PASSWORD",
+            repositoryPostFixProvider = [TravisBuildNumberPostFix.class],
+            rateLimitHandler = RateLimitHandlerWait.class,
+            resetAfterTestCase = true
+    )
+    def "task executes sonar scanner tool begin command with git-based properties"(Repository testRepo) {
+        given: "a sonar scanner executable"
+        def fakeSonarScannerExec = argReflectingFakeExecutable("sonarscanner", 0)
+        and: "a set up sonar scanner extension"
+        buildFile << forceAddObjectsToExtension(fakeSonarScannerExec)
+        and: "a set up github extension"
+        buildFile << """
+        github {
+            repositoryName = "${testRepo.fullName}"
+            username = "${testRepo.userName}"
+            token = "${testRepo.token}"
+        }
+        """
+        and: "a pull request open for this repository"
+        def prBranchName = "prbranch"
+        testRepo.createBranch(prBranchName)
+        testRepo.commit("commitmsg", prBranchName)
+        def pr = testRepo.createPullRequest("Test", prBranchName, testRepo.defaultBranch.name, "description")
+
+        and: "a setup PR git repository"
+        def git = Grgit.init(dir: projectDir)
+        git.commit(message: "any message")
+        git.checkout(branch: "PR-${pr.number}", createBranch: true)
+
+        when:
+        def result = runTasksSuccessfully("sonarScannerBegin")
+
+        then:
+        def execResults = FakeExecutable.lastExecutionResults(result)
+        def companyName = testRepo.fullName.split("/")[0]
+        execResults.args.contains("-n:${testRepo.name}".toString())
+        execResults.args.contains("-k:${companyName}_${testRepo.name}".toString())
+        execResults.args.contains("-d:sonar.branch.name=${prBranchName}".toString())
+    }
 
     def "task executes sonar scanner tool begin command with extension properties"() {
         given: "a sonar scanner executable"
         def fakeSonarScannerExec = argReflectingFakeExecutable("sonarscanner", 0)
         and: "a set up sonar scanner extension"
         buildFile << forceAddObjectsToExtension(fakeSonarScannerExec)
+        and: "a configured git"
+        def branchName = "branch"
+        def companyName = "company"
+        def repoName = "repo"
+        buildFile << """
+        github {
+            repositoryName = "${companyName}/${repoName}"
+        }
+        """
+
         and: "a configured sonarqube extension"
         def projectVersion = "0.0.1"
         buildFile << """
@@ -28,12 +83,16 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
             }
         }
         """
+        and: "a git.branch property"
         when: "running the sonarScannerBegin task"
-        def result = runTasksSuccessfully("sonarScannerBegin")
+        def result = runTasksSuccessfully("sonarScannerBegin" , "-Pgit.branch=${branchName}")
+
         then:
         def execResults = FakeExecutable.lastExecutionResults(result)
-        execResults.args.contains("-k:${moduleName}".toString())
+        execResults.args.contains("-n:${repoName}".toString())
+        execResults.args.contains("-k:${companyName}_${repoName}".toString())
         execResults.args.contains("-v:${projectVersion}".toString())
+        execResults.args.contains("-d:sonar.branch.name=${branchName}".toString())
         execResults.args.contains("-d:sonar.exclusions=src")
         !execResults.args.contains("-d:sonar.sources=")
         !execResults.args.contains("-d:sonar.prop=")
