@@ -26,7 +26,7 @@ class SonarScannerBegin extends DefaultTask {
         assertKeyOnMap(properties, "sonar.version")
         sonarScanner.begin(
                 properties["sonar.projectKey"].toString(),
-                properties["sonar.projectName"].toString(),
+                properties["sonar.projectName"]?.toString(),
                 properties["sonar.version"]?.toString(),
                 properties)
     }
