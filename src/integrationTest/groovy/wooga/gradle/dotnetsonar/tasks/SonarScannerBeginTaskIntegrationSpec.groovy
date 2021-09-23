@@ -36,7 +36,7 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
         }
         """
         and: "a pull request open for this repository"
-        def prBranchName = "prbranch"
+        def prBranchName = "realbranch"
         testRepo.createBranch(prBranchName)
         testRepo.commit("commitmsg", prBranchName)
         def pr = testRepo.createPullRequest("Test", prBranchName, testRepo.defaultBranch.name, "description")
@@ -62,8 +62,8 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
         def fakeSonarScannerExec = argReflectingFakeExecutable("sonarscanner", 0)
         and: "a set up sonar scanner extension"
         buildFile << forceAddObjectsToExtension(fakeSonarScannerExec)
-        and: "a configured git"
-        def branchName = "branch"
+
+        and: "a configured github extension"
         def companyName = "company"
         def repoName = "repo"
         buildFile << """
@@ -71,6 +71,11 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
             repositoryName = "${companyName}/${repoName}"
         }
         """
+        and: "a git repository on branch"
+        def branchName = "branch"
+        def git = Grgit.init(dir: projectDir)
+        git.commit(message: "any message")
+        git.checkout(branch: branchName, createBranch: true)
 
         and: "a configured sonarqube extension"
         def projectVersion = "0.0.1"
@@ -83,9 +88,9 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
             }
         }
         """
-        and: "a git.branch property"
+
         when: "running the sonarScannerBegin task"
-        def result = runTasksSuccessfully("sonarScannerBegin" , "-Pgit.branch=${branchName}")
+        def result = runTasksSuccessfully("sonarScannerBegin")
 
         then:
         def execResults = FakeExecutable.lastExecutionResults(result)
