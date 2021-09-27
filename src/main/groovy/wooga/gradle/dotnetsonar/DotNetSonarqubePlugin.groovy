@@ -61,11 +61,10 @@ class DotNetSonarqubePlugin implements Plugin<Project> {
         def keyProvider = companyNameProvider.map { comp ->
             return repoNameProvider.map {repoName -> "${comp}_${repoName}"}.getOrNull()
         }
-        def branchProvider = localBranchProviderWithPR(project, githubExt)
+        def branchProvider = localBranchProviderWithPR(project, githubExt).map { it.trim().isEmpty() ? null : it }
         properties.with {
             property("sonar.login", System.getenv('SONAR_TOKEN'))
             property("sonar.host.url", System.getenv('SONAR_HOST'))
-            //would be better if this was associated to github repository, see atlas-plugins
             property("sonar.projectKey", keyProvider.getOrNull())
             property("sonar.projectName", repoNameProvider.getOrNull())
             property("sonar.branch.name", branchProvider.getOrNull())
