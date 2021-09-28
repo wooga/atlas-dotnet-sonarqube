@@ -2,12 +2,17 @@ package wooga.gradle.dotnetsonar
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.UncheckedIOException
+import org.gradle.api.provider.Provider
 import org.sonarqube.gradle.ActionBroadcast
 import org.sonarqube.gradle.SonarQubeExtension
 import org.sonarqube.gradle.SonarQubeProperties
 import wooga.gradle.dotnetsonar.tasks.BuildSolution
 import wooga.gradle.dotnetsonar.tasks.SonarScannerBegin
 import wooga.gradle.dotnetsonar.tasks.SonarScannerEnd
+import wooga.gradle.github.base.GithubBasePlugin
+import wooga.gradle.github.base.GithubPluginExtension
+import wooga.gradle.github.base.internal.DefaultGithubPluginExtension
 
 import static SonarScannerExtension.*
 
@@ -15,11 +20,14 @@ class DotNetSonarqubePlugin implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
+        project.plugins.apply(GithubBasePlugin)
+        def githubExt = project.extensions.findByType(DefaultGithubPluginExtension)
+
         def actionBroadcast = new ActionBroadcast<SonarQubeProperties>()
         def sonarScannerExt = project.extensions.create(SONARSCANNER_EXTENSION_NAME, SonarScannerExtension, project, actionBroadcast)
         def sonarQubeExt = project.extensions.create(SonarQubeExtension.SONARQUBE_EXTENSION_NAME, SonarQubeExtension, actionBroadcast)
         sonarQubeExt.properties { it ->
-            defaultSonarProperties(project, it)
+            defaultSonarProperties(project, githubExt, it)
         }
 
         project.tasks.register(MS_BUILD_TASK_NAME, BuildSolution).configure { buildTask ->
@@ -46,94 +54,56 @@ class DotNetSonarqubePlugin implements Plugin<Project> {
         }
     }
 
-    static final void defaultSonarProperties(Project project, SonarQubeProperties properties) {
+    static final void defaultSonarProperties(Project project, GithubPluginExtension githubExt,
+                                                              SonarQubeProperties properties) {
+        def companyNameProvider = githubExt.repositoryName.map{String fullRepoName -> fullRepoName.split("/")[0]}
+        def repoNameProvider = githubExt.repositoryName.map{String fullRepoName -> fullRepoName.split("/")[1]}
+        def keyProvider = companyNameProvider.map { comp ->
+            return repoNameProvider.map {repoName -> "${comp}_${repoName}"}.getOrNull()
+        }
+        def branchProvider = localBranchProviderWithPR(project, githubExt).map { it.trim().isEmpty() ? null : it }
         properties.with {
             property("sonar.login", System.getenv('SONAR_TOKEN'))
             property("sonar.host.url", System.getenv('SONAR_HOST'))
-            //would be better if this was associated to github repository, see atlas-plugins
-            property("sonar.projectKey", project.rootProject.name)
-            property("sonar.projectName", project.rootProject.name)
-            //property("sonar.sources", ".")
+            property("sonar.projectKey", keyProvider.getOrNull())
+            property("sonar.projectName", repoNameProvider.getOrNull())
+            property("sonar.branch.name", branchProvider.getOrNull())
             if(project.version != null) {
                 property("sonar.version", project.version.toString())
             }
         }
     }
+
+    static Provider<String> localBranchProviderWithPR(Project project, GithubPluginExtension githubExt) {
+        def clientProvider = emptyProviderForException(project, githubExt.clientProvider, UncheckedIOException)
+
+        return githubExt.branchName.map {currentBranch ->
+            return clientProvider.map {client ->
+                def repository = client.getRepository(githubExt.repositoryName.get())
+                if (currentBranch.toUpperCase().startsWith("PR-")) {
+                    def maybePrNumber = currentBranch.replace("PR-", "").trim()
+                    if (maybePrNumber.isNumber()) {
+                        def prNumber = Integer.valueOf(maybePrNumber)
+                        return repository.getPullRequest(prNumber).head.ref
+                    }
+                    return null
+                }
+            }.getOrElse(currentBranch)
+        }
+    }
+
+    protected static <T> Provider<T> emptyProviderForException(Project project,
+                                                               Provider<T> provider,
+                                                               Class<? extends Throwable> exceptionClass) {
+        return project.provider {
+            try {
+                return provider.get()
+            }catch(Throwable e) {
+                if(exceptionClass.isInstance(e)) {
+                    return null
+                }
+                throw e
+            }
+        }
+    }
 }
-
-/*
-    steps:
-    1. Create solution if not exists already //unity task
-    2. Setup unity code coverage //unity task
-    3. download dotnet-sonarscanner if not exists //done(ish)
-    3. SonarBegin
-    4. Build C# solution //done(ish)
-    5. SonarEnd
-* */
-
-
-//    task(setupUnityProject, type:wooga.gradle.unity.tasks.Unity) {
-//        args "-executeMethod", "UnityEditor.SyncVS.SyncSolution"
-//        quit = true
-//    }
-//    tasks.withType(wooga.gradle.unity.tasks.Test) {
-//        it.dependsOn setupCodeCoverage
-//        it.args "-enableCodeCoverage"
-//        it.args "-debugCodeOptimization"
-//        it.args "-coverageResultsPath", "build/codeCoverage"
-//        it.args "-coverageOptions", "generateAdditionalMetrics"
-//    }
-//    task setupCodeCoverage {
-//        dependsOn setupUnityProject
-//        doLast {
-//            def manifest = new File(project.projectDir, 'Packages/manifest.json')
-//            def jsonSlurper = new JsonSlurper()
-//            def data = jsonSlurper.parse(manifest)
-//            data.dependencies["com.unity.testtools.codecoverage"] = "1.1.0"
-//            def json_str = JsonOutput.toJson(data)
-//            def json_beauty = JsonOutput.prettyPrint(json_str)
-//            manifest.write(json_beauty)
-//        }
-//    }
-
-// configuration inspired by https://github.com/MirageNet/Mirage/blob/master/.github/workflows/main.yml
-//        task(sonarBegin, type:Exec) {
-//            dependsOn test
-//            executable "packages/dotnet-framework-sonarscanner/tools/SonarScanner.MSBuild.exe"
-//            args "begin"
-//            args "/k:${rootProject.name}"
-//            args "/v:${version}"
-//            args "/d:sonar.login=${System.getenv('SONAR_TOKEN')}"
-//            args "/d:sonar.host.url=${System.getenv('SONAR_HOST')}"
-//            args "/d:sonar.exclusions=Assets/Paket.Unity3D/**"
-//            args "/d:sonar.cpd.exclusions=Assets/Tests/**"
-//            args "/d:sonar.coverage.exclusions=Assets/Tests/**"
-//            args "/d:sonar.cs.nunit.reportsPaths=build/reports/unity/*/*.xml"
-//            args "/d:sonar.cs.opencover.reportsPaths=build/codeCoverage/**/*.xml"
-//        }
-//
-//        task(sonarMsbuild) {
-//            dependsOn sonarBegin
-//            doLast {
-//                def contentPath =  "${unity.unityPath.getParent()}\\..\\Editor\\Data"
-//                exec {
-//                    executable "${contentPath}\\NetCore\\Sdk-2.2.107\\dotnet"
-//                    environment "FrameworkPathOverride", "${contentPath}\\MonoBleedingEdge"
-//                    args "build"
-//                    args "${project.name}.sln"
-//                }
-//            }
-//        }
-//
-//        task(sonarEnd, type:Exec) {
-//            dependsOn sonarMsbuild
-//            executable "packages/dotnet-framework-sonarscanner/tools/SonarScanner.MSBuild.exe"
-//            args "end"
-//            args "/d:sonar.login=${System.getenv('SONAR_TOKEN')}"
-//        }
-//
-//        task(sonarqube) {
-//            mustRunAfter test
-//            dependsOn sonarBegin, sonarEnd, sonarMsbuild
-//        }
-//
