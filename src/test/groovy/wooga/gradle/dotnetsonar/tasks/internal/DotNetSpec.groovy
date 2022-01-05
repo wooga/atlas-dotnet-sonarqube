@@ -22,7 +22,7 @@ class DotNetSpec extends Specification {
 
         then:
         shell.lastExecSpec.executable == executable.absolutePath
-        shell.lastExecSpec.args == ["build"] + extraArgs + [solution.absolutePath]
+        shell.lastExecSpec.args == ["build"] + [solution.absolutePath] + extraArgs
         shell.lastExecSpec.environment.entrySet().containsAll(environment.entrySet())
 
         where:
