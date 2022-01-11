@@ -22,8 +22,8 @@ class DotNet implements SolutionBuildTool {
             execSpec.executable = executable.absolutePath
             execSpec.environment(environment)
             execSpec.args("build")
-            execSpec.args(*extraArgs)
             execSpec.args(solution.absolutePath)
+            execSpec.args(*extraArgs)
         }.throwsOnFailure()
     }
 

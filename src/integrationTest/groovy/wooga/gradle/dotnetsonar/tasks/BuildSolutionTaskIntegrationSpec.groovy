@@ -19,13 +19,13 @@ class BuildSolutionTaskIntegrationSpec extends PluginIntegrationSpec {
     }
 
     @Unroll
-    def "Builds a C# solution with #tool #subtool command"() {
+    def "Builds a C# solution with dotnet #subtool #extraArgs command"() {
         given: "a msbuild executable"
-        def fakeBuildExec = argReflectingFakeExecutable(tool, 0)
+        def fakeBuildExec = argReflectingFakeExecutable("dotnet", 0)
         and: "build file with configured task"
         buildFile << """
         project.tasks.create("solutionBuild", ${BuildSolution.name}) {
-            ${tool}Executable = ${wrapValueBasedOnType(fakeBuildExec.absolutePath, File)}
+            dotnetExecutable = ${wrapValueBasedOnType(fakeBuildExec.absolutePath, File)}
             solution = ${wrapValueBasedOnType(solutionPath, File)}
             environment = ${wrapValueBasedOnType(environment, Map)}
             extraArgs = ${wrapValueBasedOnType(extraArgs, List)}
@@ -36,15 +36,41 @@ class BuildSolutionTaskIntegrationSpec extends PluginIntegrationSpec {
 
         then:
         def buildResult = executionResults(fakeBuildExec, result)
-        buildResult.args == subtool + extraArgs + [Paths.get(projectDir.absolutePath, solutionPath).toString()]
+        buildResult.args == subtool + [Paths.get(projectDir.absolutePath, solutionPath).toString()] + extraArgs
         buildResult.envs.entrySet().containsAll(environment.entrySet())
 
         where:
-        tool      | solutionPath       | subtool   | environment | extraArgs
-        "msBuild" | "solution.sln"     | []        | ["a": "b"]  | []
-        "msBuild" | "solution.sln"     | []        | [:]         | ["-arg", "/arg:value"]
-        "dotnet"  | "dir/solution.sln" | ["build"] | [:]         | []
-        "dotnet"  | "dir/solution.sln" | ["build"] | ["b": "c"]  | ["-arg", "/arg:value"]
+        solutionPath       | subtool   | environment | extraArgs
+        "dir/solution.sln" | ["build"] | [:]         | []
+        "dir/solution.sln" | ["build"] | ["b": "c"]  | ["-arg", "/arg:value"]
+    }
+
+
+    @Unroll
+    def "Builds a C# solution with msbuild #extraArgs command"() {
+        given: "a msbuild executable"
+        def fakeBuildExec = argReflectingFakeExecutable("msBuild", 0)
+        and: "build file with configured task"
+        buildFile << """
+        project.tasks.create("solutionBuild", ${BuildSolution.name}) {
+            msBuildExecutable = ${wrapValueBasedOnType(fakeBuildExec.absolutePath, File)}
+            solution = ${wrapValueBasedOnType(solutionPath, File)}
+            environment = ${wrapValueBasedOnType(environment, Map)}
+            extraArgs = ${wrapValueBasedOnType(extraArgs, List)}
+        }
+        """
+        when:
+        def result = runTasksSuccessfully("solutionBuild")
+
+        then:
+        def buildResult = executionResults(fakeBuildExec, result)
+        buildResult.args == extraArgs + [Paths.get(projectDir.absolutePath, solutionPath).toString()]
+        buildResult.envs.entrySet().containsAll(environment.entrySet())
+
+        where:
+        solutionPath       | environment | extraArgs
+        "solution.sln"     | ["a": "b"]  | []
+        "solution.sln"     | [:]         | ["-arg", "/arg:value"]
     }
 
     @Unroll
