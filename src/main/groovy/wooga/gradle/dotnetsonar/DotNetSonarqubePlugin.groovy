@@ -61,7 +61,10 @@ class DotNetSonarqubePlugin implements Plugin<Project> {
         def keyProvider = companyNameProvider.map { comp ->
             return repoNameProvider.map {repoName -> "${comp}_${repoName}"}.getOrNull()
         }
-        def branchProvider = localBranchProviderWithPR(project, githubExt).map { it.trim().isEmpty() ? null : it }
+        //branch.name should be empty if this branch is from a PR, so that the github PR can be set up.
+        def branchProvider = githubExt.branchName.
+                map {it -> it.empty? null : it}.
+                map{isPR(it)? null : it}
         properties.with {
             property("sonar.login", System.getenv('SONAR_TOKEN'))
             property("sonar.host.url", System.getenv('SONAR_HOST'))
@@ -74,36 +77,10 @@ class DotNetSonarqubePlugin implements Plugin<Project> {
         }
     }
 
-    static Provider<String> localBranchProviderWithPR(Project project, GithubPluginExtension githubExt) {
-        def clientProvider = emptyProviderForException(project, githubExt.clientProvider, UncheckedIOException)
-
-        return githubExt.branchName.map {currentBranch ->
-            return clientProvider.map {client ->
-                def repository = client.getRepository(githubExt.repositoryName.get())
-                if (currentBranch.toUpperCase().startsWith("PR-")) {
-                    def maybePrNumber = currentBranch.replace("PR-", "").trim()
-                    if (maybePrNumber.isNumber()) {
-                        def prNumber = Integer.valueOf(maybePrNumber)
-                        return repository.getPullRequest(prNumber).head.ref
-                    }
-                    return null
-                }
-            }.getOrElse(currentBranch)
-        }
+    //PR branches are identified as PR-XX where XX is any number.
+    static boolean isPR(String currentBranch) {
+        def maybePrNumber = currentBranch.replace("PR-", "").trim()
+        return currentBranch.toUpperCase().startsWith("PR-") && maybePrNumber.isNumber()
     }
 
-    protected static <T> Provider<T> emptyProviderForException(Project project,
-                                                               Provider<T> provider,
-                                                               Class<? extends Throwable> exceptionClass) {
-        return project.provider {
-            try {
-                return provider.get()
-            }catch(Throwable e) {
-                if(exceptionClass.isInstance(e)) {
-                    return null
-                }
-                throw e
-            }
-        }
-    }
 }

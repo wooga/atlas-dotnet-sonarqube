@@ -10,9 +10,6 @@ import spock.lang.Unroll
 import wooga.gradle.dotnetsonar.tasks.utils.PluginIntegrationSpec
 import wooga.gradle.dotnetsonar.utils.FakeExecutable
 
-import static wooga.gradle.dotnetsonar.utils.SpecFakes.argReflectingFakeExecutable
-import static wooga.gradle.dotnetsonar.utils.SpecUtils.rootCause
-
 class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
 
     @GithubRepository(
@@ -35,16 +32,6 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
             token = "${testRepo.token}"
         }
         """
-        and: "a pull request open for this repository"
-        def prBranchName = "realbranch"
-        testRepo.createBranch(prBranchName)
-        testRepo.commit("commitmsg", prBranchName)
-        def pr = testRepo.createPullRequest("Test", prBranchName, testRepo.defaultBranch.name, "description")
-
-        and: "a setup PR git repository"
-        def git = Grgit.init(dir: projectDir)
-        git.commit(message: "any message")
-        git.checkout(branch: "PR-${pr.number}", createBranch: true)
 
         when:
         def result = runTasksSuccessfully("sonarScannerBegin")
@@ -54,7 +41,29 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
         def companyName = testRepo.fullName.split("/")[0]
         execResults.args.contains("-n:${testRepo.name}".toString())
         execResults.args.contains("-k:${companyName}_${testRepo.name}".toString())
-        execResults.args.contains("-d:sonar.branch.name=${prBranchName}".toString())
+    }
+
+    def "task sets branch property name accordingly with its PR or non-PR status"() {
+        given: "a sonar scanner executable"
+        def fakeSonarScannerExec = argReflectingFakeExecutable("sonarscanner", 0)
+        and: "a set up sonar scanner extension"
+        buildFile << forceAddObjectsToExtension(fakeSonarScannerExec)
+
+        when:
+        def result = runTasksSuccessfully("sonarScannerBegin")
+
+        then:
+        def execResults = FakeExecutable.lastExecutionResults(result)
+        if(expectedBranchProperty) {
+            execResults.args.contains("-d:sonar.branch.name=${expectedBranchProperty}".toString())
+        } else {
+            !execResults.args.contains("-d:sonar.branch.name")
+        }
+        where:
+        branchName | expectedBranchProperty
+        "name" | "name"
+        "PR-10" | null
+        "PR-fe" | "PR-fe"
     }
 
     def "task executes sonar scanner tool begin command with extension properties"() {
@@ -172,3 +181,6 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
         e.message.contains("exit value 1")
     }
 }
+import static wooga.gradle.dotnetsonar.utils.SpecFakes.argReflectingFakeExecutable
+
+import static wooga.gradle.dotnetsonar.utils.SpecUtils.rootCause
