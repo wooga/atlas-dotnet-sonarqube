@@ -17,6 +17,9 @@
 
 plugins {
     id 'net.wooga.plugins' version '2.2.3'
+    id 'net.wooga.snyk' version '0.10.0'
+    id "net.wooga.snyk-gradle-plugin" version "0.1.0"
+    id "net.wooga.cve-dependency-resolution" version "0.4.0"
 }
 
 group 'net.wooga.gradle'
@@ -53,14 +56,4 @@ dependencies {
     implementation 'gradle.plugin.net.wooga.gradle:atlas-github:2.+'
     testImplementation 'com.wooga.spock.extensions:spock-github-extension:0.2.0'
     testImplementation 'org.ajoberstar.grgit:grgit-core:4.+'
-}
-
-configurations.all {
-    resolutionStrategy {
-        force 'org.codehaus.groovy:groovy-all:2.5.12'
-        force 'org.codehaus.groovy:groovy-macro:2.5.12'
-        force 'org.codehaus.groovy:groovy-nio:2.5.12'
-        force 'org.codehaus.groovy:groovy-sql:2.5.12'
-        force 'org.codehaus.groovy:groovy-xml:2.5.12'
-    }
 }
