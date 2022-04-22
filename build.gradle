@@ -54,6 +54,6 @@ github {
 dependencies {
     api 'org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:3.2.0'
     implementation 'gradle.plugin.net.wooga.gradle:atlas-github:2.+'
-    testImplementation 'com.wooga.spock.extensions:spock-github-extension:0.2.0'
+    testImplementation 'com.wooga.spock.extensions:spock-github-extension:0.3.0'
     testImplementation 'org.ajoberstar.grgit:grgit-core:4.+'
 }
