@@ -5,4 +5,4 @@ pluginManagement {
   }
 }
 
-rootProject.name = 'atlas-dotnet-sonarqube'
+rootProject.name = 'dotnet-sonarqube'
