@@ -20,6 +20,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import wooga.gradle.dotnetsonar.SonarScannerExtension
@@ -81,7 +82,7 @@ class SonarScannerInstall extends DefaultTask {
         return version
     }
 
-    @Input
+    @InputDirectory
     DirectoryProperty getInstallationDir() {
         return installationDir
     }

@@ -38,6 +38,11 @@ class BuildSolutionTaskIntegrationSpec extends PluginIntegrationSpec {
     def "Builds a C# solution with dotnet #subtool #extraArgs command"() {
         given: "a msbuild executable"
         def fakeBuildExec = argReflectingFakeExecutable("dotnet", 0)
+        and: "fake solution file"
+        new File(projectDir, solutionPath).with {
+            parentFile.mkdirs()
+            createNewFile()
+        }
         and: "build file with configured task"
         buildFile << """
         project.tasks.create("solutionBuild", ${BuildSolution.name}) {
@@ -66,6 +71,11 @@ class BuildSolutionTaskIntegrationSpec extends PluginIntegrationSpec {
     def "Builds a C# solution with msbuild #extraArgs command"() {
         given: "a msbuild executable"
         def fakeBuildExec = argReflectingFakeExecutable("msBuild", 0)
+        and: "fake solution file"
+        new File(projectDir, solutionPath).with {
+            parentFile.mkdirs()
+            createNewFile()
+        }
         and: "build file with configured task"
         buildFile << """
         project.tasks.create("solutionBuild", ${BuildSolution.name}) {
@@ -93,11 +103,16 @@ class BuildSolutionTaskIntegrationSpec extends PluginIntegrationSpec {
     def "#tool build task fails if tool returns non-zero status"() {
         given: "a build executable"
         def fakeMsBuildExec = argReflectingFakeExecutable(tool, 1)
+        and: "fake solution file"
+        new File(projectDir, solutionPath).with {
+            parentFile.mkdirs()
+            createNewFile()
+        }
         and: "build file with configured task"
         buildFile << """
         project.tasks.create("solutionBuild", ${BuildSolution.name}) {
             ${tool}Executable = ${wrapValueBasedOnType(fakeMsBuildExec.absolutePath, File)}
-            solution = ${wrapValueBasedOnType("solution.sln", File)}
+            solution = ${wrapValueBasedOnType(solutionPath, File)}
         }
         """
         when:
@@ -110,5 +125,6 @@ class BuildSolutionTaskIntegrationSpec extends PluginIntegrationSpec {
         e.message.contains("exit value 1")
         where:
         tool << ["msBuild", "dotnet"]
+        solutionPath = "solution.sln"
     }
 }
