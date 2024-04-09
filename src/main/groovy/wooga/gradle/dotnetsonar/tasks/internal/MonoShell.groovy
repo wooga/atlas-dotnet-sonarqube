@@ -19,18 +19,18 @@ package wooga.gradle.dotnetsonar.tasks.internal
 import org.gradle.api.Project
 import org.gradle.process.ExecSpec
 
-class GradleMonoShell implements Shell {
+class MonoShell implements Shell {
 
     private Shell baseShell;
     private File monoExecutable
 
 
-    static GradleMonoShell forProject(Project project, File monoExecutable) {
+    static MonoShell forProject(Project project, File monoExecutable) {
         Shell baseShell = new GradleShell(project)
-        return new GradleMonoShell(baseShell, monoExecutable)
+        return new MonoShell(baseShell, monoExecutable)
     }
 
-    GradleMonoShell(Shell baseShell, File monoExecutable) {
+    MonoShell(Shell baseShell, File monoExecutable) {
         this.baseShell = baseShell
         this.monoExecutable = monoExecutable
     }

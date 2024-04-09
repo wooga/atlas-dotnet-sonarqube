@@ -101,14 +101,14 @@ class SonarScannerExtension {
         }.findAll {it.key != null && it.value != null }
     }
 
-    Provider<SonarScanner> createSonarScannerProvider(Project project, SonarScannerFactory factory) {
+    Provider<SonarScanner> createSonarScannerProvider(Project project, SonarScannerFactory scanners) {
         def workingDir = project.projectDir
 
         def scannerFromFile = sonarScannerExecutable.map( { RegularFile scannerExec ->
-            factory.fromExecutable(scannerExec.asFile, workingDir)
+            scanners.fromExecutable(scannerExec.asFile, workingDir)
         }.memoize())
-        def scannerFromPath = project.provider({ factory.fromPath(workingDir).orElse(null) }.memoize())
-        def scannerFromRemote = installInfo.provideScannerFromRemote(project, factory, workingDir)
+        def scannerFromPath = project.provider({ scanners.fromPath(workingDir).orElse(null) }.memoize())
+        def scannerFromRemote = installInfo.provideScannerFromRemote(project, scanners, workingDir)
         return scannerFromFile.orElse(scannerFromPath).orElse(scannerFromRemote)
     }
 
@@ -116,12 +116,8 @@ class SonarScannerExtension {
         return monoExecutable
     }
 
-    RegularFileProperty getSonarScannerExecutable() {
-        return sonarScannerExecutable
-    }
-
-    MapProperty<String, ?> getSonarQubeProperties() {
-        return sonarQubeProperties;
+    void setMonoExecutable(Provider<RegularFile> monoExecutable) {
+        this.monoExecutable.set(monoExecutable)
     }
 
     void setMonoExecutable(RegularFileProperty monoExecutable) {
@@ -132,6 +128,26 @@ class SonarScannerExtension {
         this.monoExecutable.set(monoExecutable)
     }
 
+    RegularFileProperty getDotnetExecutable() {
+        return monoExecutable
+    }
+
+    void setDotnetExecutable(Provider<RegularFile> monoExecutable) {
+        this.monoExecutable.set(monoExecutable)
+    }
+
+    void setDotnetExecutable(RegularFileProperty monoExecutable) {
+        this.monoExecutable.set(monoExecutable)
+    }
+
+    void setDotnetExecutable(File monoExecutable) {
+        this.monoExecutable.set(monoExecutable)
+    }
+
+    RegularFileProperty getSonarScannerExecutable() {
+        return sonarScannerExecutable
+    }
+
     void setSonarScannerExecutable(File sonarScannerExecutable) {
         this.sonarScannerExecutable.set(sonarScannerExecutable)
     }
@@ -140,5 +156,11 @@ class SonarScannerExtension {
         this.sonarScannerExecutable.set(sonarScannerExecutable)
     }
 
+    void setSonarScannerExecutable(Provider<RegularFile> sonarScannerExecutable) {
+        this.sonarScannerExecutable.set(sonarScannerExecutable)
+    }
 
+    MapProperty<String, ?> getSonarQubeProperties() {
+        return sonarQubeProperties;
+    }
 }

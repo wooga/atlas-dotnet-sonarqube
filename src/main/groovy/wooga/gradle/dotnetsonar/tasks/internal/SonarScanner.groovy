@@ -26,7 +26,7 @@ class SonarScanner implements Serializable {
     }
 
     static SonarScanner monoBased(Project project, File executable, File monoExecutable, File workingDir) {
-        return new SonarScanner(GradleMonoShell.forProject(project, monoExecutable), executable, workingDir)
+        return new SonarScanner(MonoShell.forProject(project, monoExecutable), executable, workingDir)
     }
 
     private Shell shell;

@@ -23,7 +23,7 @@ import static wooga.gradle.dotnetsonar.utils.SpecFakes.argReflectingFakeExecutab
 import static wooga.gradle.dotnetsonar.utils.SpecFakes.fakeShell
 import static wooga.gradle.dotnetsonar.utils.SpecUtils.emptyTmpFile
 
-class GradleMonoShellSpec extends Specification {
+class MonoShellSpec extends Specification {
 
     def "sets up execution specification to be ran using given mono executable"() {
         given: "a mono executable"
@@ -34,7 +34,7 @@ class GradleMonoShellSpec extends Specification {
         def shell = fakeShell()
 
         when: "executing given file using gradle mono shell"
-        def monoShell = new GradleMonoShell(shell, monoExec)
+        def monoShell = new MonoShell(shell, monoExec)
         monoShell.execute { ExecSpec exec ->
             exec.executable = runExec.absolutePath
             exec.args = ["arg1", "arg2"]
