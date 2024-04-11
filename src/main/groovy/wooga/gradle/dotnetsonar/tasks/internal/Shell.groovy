@@ -16,9 +16,13 @@
 
 package wooga.gradle.dotnetsonar.tasks.internal
 
+import org.gradle.process.ExecSpec
+
+import java.util.function.Consumer
+
 
 interface Shell {
 
-    ShellResult execute(Closure execSpecClosure)
-    ShellResult execute(boolean logging, Closure execSpecClosure)
+    ShellResult execute(Consumer<ExecSpec> execSpecClosure)
+    ShellResult execute(boolean logging, Consumer<ExecSpec> execSpecClosure)
 }

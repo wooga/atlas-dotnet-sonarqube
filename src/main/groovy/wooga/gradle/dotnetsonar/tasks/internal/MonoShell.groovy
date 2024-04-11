@@ -19,6 +19,8 @@ package wooga.gradle.dotnetsonar.tasks.internal
 import org.gradle.api.Project
 import org.gradle.process.ExecSpec
 
+import java.util.function.Consumer
+
 class MonoShell implements Shell {
 
     private Shell baseShell;
@@ -36,7 +38,7 @@ class MonoShell implements Shell {
     }
 
     @Override
-    public ShellResult execute(boolean logging=true, Closure execSpecClosure) {
+    public ShellResult execute(boolean logging=true, Consumer<ExecSpec> execSpecClosure) {
         return baseShell.execute { ExecSpec exec ->
             execSpecClosure(exec)
             exec.args = [exec.executable] + exec.args

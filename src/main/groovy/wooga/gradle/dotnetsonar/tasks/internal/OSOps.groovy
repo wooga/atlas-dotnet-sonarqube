@@ -17,6 +17,8 @@
 package wooga.gradle.dotnetsonar.tasks.internal
 
 import org.gradle.api.Project
+import org.gradle.api.file.RegularFile
+import org.gradle.api.provider.Provider
 import org.gradle.process.ExecSpec
 
 class OSOps {
@@ -25,6 +27,15 @@ class OSOps {
 
     static boolean isWindows() {
         return osName.contains("windows")
+    }
+
+    static Provider<RegularFile> findInOSPathProvider(Project project, String windowsFileName, String unixFileName) {
+        project.provider {
+            def maybeExecutable = findInOSPath(project, windowsFileName, unixFileName).map {executable ->
+                project.layout.projectDirectory.file(executable.absolutePath)
+            }
+            return maybeExecutable.orElse(null)
+        }
     }
 
     static Optional<File> findInOSPath(Project project, String windowsFileName, String unixFileName) {
@@ -38,6 +49,16 @@ class OSOps {
     static Optional<File> findInOSPath(Project project, String fileName) {
         return findInOSPath(new GradleShell(project), fileName)
     }
+
+    static Provider<RegularFile> findInOSPathProvider(Project project, String fileName) {
+        project.provider {
+            def maybeExecutable = findInOSPath(project, fileName).map {executable ->
+                project.layout.projectDirectory.file(executable.absolutePath)
+            }
+            return maybeExecutable.orElse(null)
+        }
+    }
+
 
     static Optional<File> findInOSPath(Shell shell, String fileName) {
         ShellResult result

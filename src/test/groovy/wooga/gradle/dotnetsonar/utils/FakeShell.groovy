@@ -16,13 +16,15 @@
 
 package wooga.gradle.dotnetsonar.utils
 
-
+import org.gradle.api.Action
 import org.gradle.process.ExecResult
 import org.gradle.process.ExecSpec
 import org.gradle.process.internal.DefaultExecSpec
 import org.gradle.process.internal.ExecException
 import wooga.gradle.dotnetsonar.tasks.internal.Shell
 import wooga.gradle.dotnetsonar.tasks.internal.ShellResult
+
+import java.util.function.Consumer
 
 class FakeShell implements Shell {
 
@@ -34,7 +36,7 @@ class FakeShell implements Shell {
     }
 
     @Override
-    ShellResult execute(boolean logging=true, Closure execSpecClosure) {
+    ShellResult execute(boolean logging=true, Consumer<ExecSpec> execSpecClosure) {
         ExecSpec spec = new DefaultExecSpec(SpecFakes.fakeResolver())
         execSpecClosure(spec)
         this.lastExecSpec = spec

@@ -17,40 +17,23 @@
 package wooga.gradle.dotnetsonar.tasks
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
+import wooga.gradle.dotnetsonar.SonarScannerExtension
 import wooga.gradle.dotnetsonar.tasks.internal.DotNet
 import wooga.gradle.dotnetsonar.tasks.internal.MSBuild
 import wooga.gradle.dotnetsonar.tasks.internal.OSOps
 import wooga.gradle.dotnetsonar.tasks.internal.SolutionBuildTool
 
 class BuildSolution extends DefaultTask {
-
-    static void configureDefaultMSBuild(BuildSolution buildTask) {
-        def projectDir = buildTask.project.layout.projectDirectory
-        buildTask.with {
-            OSOps.findInOSPath(buildTask.project, "MSBuild.exe", "msbuild").ifPresent {msbuildExec ->
-                msBuildExecutable.convention(projectDir.file(msbuildExec.absolutePath))
-            }
-            solution.convention(projectDir.file("${project.name}.sln"))
-        }
-    }
-
-    static void configureDefaultDotNetBuild(BuildSolution buildTask) {
-        def projectDir = buildTask.project.layout.projectDirectory
-        buildTask.with {
-            OSOps.findInOSPath(buildTask.project, "dotnet").ifPresent {dotnetExec ->
-                dotnetExecutable.convention(projectDir.file(dotnetExec.absolutePath))
-            }
-            solution.convention(projectDir.file("${project.name}.sln"))
-        }
-    }
 
     private Property<SolutionBuildTool> buildTool
     private RegularFileProperty msBuildExecutable
@@ -71,10 +54,52 @@ class BuildSolution extends DefaultTask {
     @TaskAction
     void run() {
         def resolvedBuildTool = buildTool.
-                orElse(dotnetExecutable.map{DotNet.gradleBased(getProject(), it.asFile)}).
-                orElse(msBuildExecutable.map{MSBuild.gradleBased(getProject(), it.asFile)}).
+                orElse(dotnetExecutable.map { DotNet.gradleBased(getProject(), it.asFile) }).
+                orElse(msBuildExecutable.map { MSBuild.gradleBased(getProject(), it.asFile) }).
                 get()
         resolvedBuildTool.buildSolution(solution.get().asFile, environment.get(), extraArgs.getOrElse([]))
+    }
+
+
+    /**
+     *
+     * @param dotnetExecutable: Provider<File> or Provider<RegularFile> object to the dotnet exxecutable
+     * @return
+     */
+    Provider<SolutionBuildTool> dotnetBuildTool(Provider<?> dotnetExecutable) {
+        dotnetExecutable.map { exec ->
+            if(exec instanceof File) {
+                return DotNet.gradleBased(project, exec as File)
+            } else if (exec instanceof RegularFile) {
+                return DotNet.gradleBased(project, exec.asFile)
+            }
+            throw new IllegalArgumentException("'dotnetExecutable' should be a Provider<File> or Provider<RegularFile>")
+        }
+    }
+    /**
+     * * Helper to create SolutionBuildTool objects to be used with the {@code buildTool} property
+     * @return {@code SolutionBuildTool} to build with dotnet
+     */
+    SolutionBuildTool dotnetBuildTool(File dotnetExecutable) {
+        DotNet.gradleBased(project, dotnetExecutable)
+    }
+
+    /**
+     * Helper to create SolutionBuildTool objects to be used with the {@code buildTool} property
+     * @return {@code Provider<SolutionBuildTool>} to build with msbuild
+     */
+    Provider<SolutionBuildTool> msBuildBuildTool(Provider<File> msBuildExecutable) {
+        msBuildExecutable.map { exec ->
+            return MSBuild.gradleBased(project, exec as File)
+        }
+    }
+
+    /**
+     * Helper to create SolutionBuildTool objects to be used with the {@code buildTool} property
+     * @return {@code Provider<SolutionBuildTool>} to build with msbuild
+     */
+    SolutionBuildTool msBuildBuildTool(File msBuildExecutable) {
+        MSBuild.gradleBased(project, msBuildExecutable)
     }
 
     @InputFile

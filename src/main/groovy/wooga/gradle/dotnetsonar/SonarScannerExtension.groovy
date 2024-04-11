@@ -16,15 +16,15 @@
 
 package wooga.gradle.dotnetsonar
 
+import groovy.transform.stc.ClosureParams
+import groovy.transform.stc.SimpleType
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Provider
-import org.sonarqube.gradle.ActionBroadcast
-import org.sonarqube.gradle.SonarPropertyComputer
-import org.sonarqube.gradle.SonarQubeProperties
+import org.gradle.api.tasks.TaskProvider
 import wooga.gradle.dotnetsonar.tasks.SonarScannerBegin
 import wooga.gradle.dotnetsonar.tasks.SonarScannerEnd
 import wooga.gradle.dotnetsonar.tasks.internal.SonarScanner
@@ -40,28 +40,31 @@ class SonarScannerExtension {
     public static final String END_TASK_NAME = "sonarScannerEnd"
 
     private final Project project;
-    private final SonarScannerFactory scannerFactory;
-    private final ActionBroadcast<SonarQubeProperties> actionBroadcast;
-
-    private final SonarScannerInstallInfo installInfo
-    private final RegularFileProperty sonarScannerExecutable
-    private final RegularFileProperty monoExecutable
-    private final MapProperty<String, ?> sonarQubeProperties
+    final SonarScannerInstallInfo installInfo
+    final BuildToolsInfo buildTools
     private final Provider<SonarScanner> sonarScanner;
 
-    SonarScannerExtension(Project project, ActionBroadcast<SonarQubeProperties> actionBroadcast) {
-        this.installInfo = new SonarScannerInstallInfo(project)
-        this.monoExecutable = project.objects.fileProperty()
-        this.sonarScannerExecutable = project.objects.fileProperty()
-        this.sonarQubeProperties = project.objects.mapProperty(String, Object)
-        sonarQubeProperties.convention(project.provider{
-            this.computeSonarProperties(project)
-        })
+    private final RegularFileProperty sonarScannerExecutable = project.objects.fileProperty()
+    private final RegularFileProperty monoExecutable = project.objects.fileProperty()
+    private final MapProperty<String, ?> sonarQubeProperties = project.objects.mapProperty(String, Object)
 
+    SonarScannerExtension(Project project) {
         this.project = project
-        this.actionBroadcast = actionBroadcast
-        this.scannerFactory = SonarScannerFactory.withPathFallback(project, monoExecutable.map{it.asFile})
-        this.sonarScanner = createSonarScannerProvider(project, scannerFactory)
+        this.installInfo = new SonarScannerInstallInfo(project)
+        this.buildTools = new BuildToolsInfo(project)
+        this.sonarScanner = createSonarScannerProvider(project, new SonarScannerFactory(project, monoExecutable.asFile))
+    }
+
+    /**
+     * Registers tasks as sonar scanner build tasks, meaning that these tasks will be executed in between
+     * SonarScannerBegin and SonarScannerEnd tasks
+     * @param task tasks to be registered
+     */
+    void registerBuildTask(TaskProvider<? extends Task>... tasks) {
+        tasks.each {taskProvider ->
+            taskProvider.configure { task -> this.registerBuildTask(task) }
+        }
+
     }
 
     /**
@@ -80,25 +83,20 @@ class SonarScannerExtension {
      * Convenience method for filling up sonarscanner installation info. Only used if sonar scanner is downloaded from remote.
      * @param installInfoOps closure operating over install info object
      */
-    void installInfo(Closure installInfoOps) {
-        def opsDuplicate = installInfoOps.clone() as Closure
-        opsDuplicate.delegate = this.installInfo
-        opsDuplicate.setResolveStrategy(Closure.DELEGATE_FIRST)
-        opsDuplicate(this.installInfo)
+    void installInfo(@DelegatesTo(SonarScannerInstallInfo)
+                     @ClosureParams(value=SimpleType, options=["wooga.gradle.dotnetsonar.SonarScannerInstallInfo"])
+                     Closure installInfoOps) {
+        this.installInfo.with(installInfoOps)
+    }
+
+    void buildTools(@DelegatesTo(BuildToolsInfo)
+                        @ClosureParams(value=SimpleType, options=["wooga.gradle.dotnetsonar.BuildToolsInfo"])
+                                Closure buildToolsOps) {
+        this.buildTools.with(buildToolsOps)
     }
 
     Provider<SonarScanner> getSonarScanner() {
         return sonarScanner
-    }
-
-    Map<String, Object> computeSonarProperties(Project project) {
-        def actionBroadcastMap = new HashMap<String, ActionBroadcast<SonarQubeProperties>>()
-        actionBroadcastMap[project.path] = actionBroadcast
-        def propertyComputer = new SonarPropertyComputer(actionBroadcastMap, project)
-        def properties = propertyComputer.computeSonarProperties()
-        return properties.collectEntries {
-            return it.value != null && it.value != ""? [it.key, it.value] : []
-        }.findAll {it.key != null && it.value != null }
     }
 
     Provider<SonarScanner> createSonarScannerProvider(Project project, SonarScannerFactory scanners) {
