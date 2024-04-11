@@ -26,6 +26,8 @@ import spock.lang.Unroll
 import wooga.gradle.dotnetsonar.tasks.utils.PluginIntegrationSpec
 import wooga.gradle.dotnetsonar.utils.FakeExecutable
 
+import static wooga.gradle.dotnetsonar.utils.SpecFakes.argReflectingFakeExecutable
+
 class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
 
     @GithubRepository(
@@ -197,6 +199,6 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
         e.message.contains("exit value 1")
     }
 }
-import static wooga.gradle.dotnetsonar.utils.SpecFakes.argReflectingFakeExecutable
+
 
 import static wooga.gradle.dotnetsonar.utils.SpecUtils.rootCause

@@ -16,7 +16,7 @@
 
 package wooga.gradle.dotnetsonar.utils
 
-import org.gradle.api.Action
+
 import org.gradle.process.ExecResult
 import org.gradle.process.ExecSpec
 import org.gradle.process.internal.DefaultExecSpec

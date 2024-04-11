@@ -25,14 +25,12 @@ import org.sonarqube.gradle.SonarQubeProperties
 import wooga.gradle.dotnetsonar.tasks.BuildSolution
 import wooga.gradle.dotnetsonar.tasks.SonarScannerBegin
 import wooga.gradle.dotnetsonar.tasks.SonarScannerEnd
-import wooga.gradle.dotnetsonar.tasks.internal.DotNet
-import wooga.gradle.dotnetsonar.tasks.internal.MSBuild
 import wooga.gradle.dotnetsonar.tasks.internal.OSOps
 import wooga.gradle.github.base.GithubBasePlugin
 import wooga.gradle.github.base.GithubPluginExtension
 import wooga.gradle.github.base.internal.DefaultGithubPluginExtension
 
-import static SonarScannerExtension.*
+import static wooga.gradle.dotnetsonar.SonarScannerExtension.*
 
 class DotNetSonarqubePlugin implements Plugin<Project> {
 

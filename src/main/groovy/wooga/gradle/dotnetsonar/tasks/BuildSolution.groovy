@@ -27,10 +27,8 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
-import wooga.gradle.dotnetsonar.SonarScannerExtension
 import wooga.gradle.dotnetsonar.tasks.internal.DotNet
 import wooga.gradle.dotnetsonar.tasks.internal.MSBuild
-import wooga.gradle.dotnetsonar.tasks.internal.OSOps
 import wooga.gradle.dotnetsonar.tasks.internal.SolutionBuildTool
 
 class BuildSolution extends DefaultTask {

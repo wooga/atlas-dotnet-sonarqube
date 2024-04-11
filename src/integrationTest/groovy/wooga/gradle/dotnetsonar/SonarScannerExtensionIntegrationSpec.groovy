@@ -21,11 +21,8 @@ import wooga.gradle.dotnetsonar.tasks.internal.SonarScannerInstaller
 import wooga.gradle.dotnetsonar.tasks.utils.PluginIntegrationSpec
 import wooga.gradle.dotnetsonar.utils.SpecFakes
 
-import static wooga.gradle.dotnetsonar.utils.SpecUtils.wasExecutedAfter
-import static wooga.gradle.dotnetsonar.utils.SpecUtils.wasExecutedBefore
 import static wooga.gradle.dotnetsonar.tasks.internal.SonarScannerInstaller.defaultBaseURL
-import static wooga.gradle.dotnetsonar.utils.SpecUtils.wrapValueBasedOnType
-
+import static wooga.gradle.dotnetsonar.utils.SpecUtils.*
 
 class SonarScannerExtensionIntegrationSpec extends PluginIntegrationSpec {
 

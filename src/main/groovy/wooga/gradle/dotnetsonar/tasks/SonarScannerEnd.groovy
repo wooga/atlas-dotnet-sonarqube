@@ -16,14 +16,10 @@
 
 package wooga.gradle.dotnetsonar.tasks
 
-
 import org.gradle.api.DefaultTask
-import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
-import wooga.gradle.dotnetsonar.SonarScannerExtension
 import wooga.gradle.dotnetsonar.tasks.internal.SonarScanner
 
 class SonarScannerEnd extends DefaultTask {
