@@ -26,16 +26,6 @@ class SonarScannerFactory {
     private Project project;
     private Provider<? extends File> monoExecutable;
 
-    public static SonarScannerFactory withPathFallback(Project project, Provider<? extends File> monoExecutable) {
-        def monoProvider = monoExecutable.orElse(project.provider {
-            OSOps.findInOSPath(project, "mono").orElseThrow {
-                 return new FileNotFoundException
-                        ("Could not find 'mono' executable in OS PATH nor in SonarScannerExtension properties")
-            }
-        })
-        return new SonarScannerFactory(project, monoProvider)
-    }
-
     SonarScannerFactory(Project project, Provider<File> monoExecutable) {
         this.project = project;
         this.monoExecutable = monoExecutable
