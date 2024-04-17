@@ -26,6 +26,7 @@ class SonarScannerInstaller {
 
     //this executable only exists for .NET [4.6, 5)
     public static final String EXECUTABLE_NAME = "SonarScanner.MSBuild.exe";
+    public static final String DLL_NAME = "SonarScanner.MSBuild.dll";
     public static final String DOTNET_VERSION = "net46";
     public static final String defaultBaseURL = "https://github.com/SonarSource/sonar-scanner-msbuild/releases/download"
 
@@ -63,19 +64,34 @@ class SonarScannerInstaller {
             it.readable = true
             it.executable = true
         }
-        def sonarScannerExecutable = executableFiles.find{it.absolutePath.endsWith(EXECUTABLE_NAME)}
-        return Optional.ofNullable(sonarScannerExecutable).orElseThrow {
+        def sonarScannerEntrypoint = findSonarScannerEntrypoint(installationDir)
+        return sonarScannerEntrypoint.orElseThrow {
             new FileNotFoundException("Couldn't find sonar-scanner executable in installed package")
         }
     }
+    public static Optional<File> findSonarScannerEntrypoint(File installationDir, boolean forceExecutable=false) {
+        def targetFiles = forceExecutable?
+                ["SonarScanner.MSBuild.exe"] :
+                ["SonarScanner.MSBuild.dll", "SonarScanner.MSBuild.exe"]
 
-    private static File[] findScannerExecutableFiles(File installationDir) {
+        Files.walk(installationDir.toPath()).filter {
+            it.fileName.toString() in targetFiles
+        }
+        .map {it.toFile()}
+        .findFirst()
+    }
+
+    public static List<File> findScannerExecutableFiles(File installationDir) {
+        if(!installationDir.directory) {
+            return []
+        }
         def installedFiles = Files.walk(Paths.get(installationDir.absolutePath))
         return installedFiles.filter { path ->
             def file = path.toFile()
             def isBaseExecutable = file.isFile() && file.absolutePath.endsWith(EXECUTABLE_NAME)
             def isFromBinFolder = file.isFile() && path.parent.fileName.toString() == "bin"
-            return isBaseExecutable || isFromBinFolder
+            def isDotExeFile = file.isFile() && path.parent.fileName.toString().endsWith(".exe")
+            return isBaseExecutable || isFromBinFolder || isDotExeFile
         }.map{it.toFile()}.collect(Collectors.toList())
     }
 }
