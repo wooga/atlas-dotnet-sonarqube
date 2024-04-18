@@ -17,89 +17,46 @@
 package wooga.gradle.dotnetsonar.tasks
 
 import org.gradle.api.DefaultTask
-import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.Optional
+import org.gradle.api.file.RegularFile
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
-import wooga.gradle.dotnetsonar.SonarScannerExtension
 import wooga.gradle.dotnetsonar.tasks.internal.SonarScannerInstaller
+import wooga.gradle.dotnetsonar.tasks.traits.SonarScannerInstallSpec
 
-class SonarScannerInstall extends DefaultTask {
+class SonarScannerInstall extends DefaultTask implements SonarScannerInstallSpec {
 
-    public static final String EXECUTABLE_NAME = SonarScannerInstaller.EXECUTABLE_NAME
+    private final RegularFileProperty sonarScannerEntrypoint = objects.fileProperty()
 
-    private Property<String> sourceURL
-    private Property<String> version
-    private DirectoryProperty installationDir
-
-    static void configureDefaultInstall(SonarScannerInstall scannerInstallTask) {
-        def project = scannerInstallTask.project
-        scannerInstallTask.with {
-            version.convention("5.2.2.33595")
-            installationDir.convention(project.layout.buildDirectory.dir("bin/net-sonarscanner"))
-        }
-        scannerInstallTask.onlyIf {
-            SonarScannerExtension sonarScannerExt = project.extensions.getByType(SonarScannerExtension)
-            return !sonarScannerExt.sonarScanner.present
-        }
+    @Internal
+    Provider<RegularFile> getSonarScannerEntrypoint() {
+        return sonarScannerEntrypoint
     }
 
     SonarScannerInstall() {
-        this.sourceURL = project.objects.property(String)
-        this.version = project.objects.property(String)
-        this.installationDir = project.objects.directoryProperty()
+        sonarScannerEntrypoint.convention(installDir.map { installDir ->
+            def sonarScanner = SonarScannerInstaller.findSonarScannerEntrypoint(installDir.asFile)
+            return sonarScanner.map {installDir.file(it.absolutePath) }.orElse(null)
+        })
+
+        onlyIf {
+            def lacksScanner = !sonarScannerEntrypoint.present
+            if(!lacksScanner) {
+                logger.info("SonarScanner already installed in " +
+                        "${sonarScannerEntrypoint.get().asFile.parentFile.absolutePath}, skipping"
+                )
+            }
+            return lacksScanner
+        }
     }
 
     @TaskAction
     def run() {
-        SonarScannerExtension sonarScannerExt = project.extensions.getByType(SonarScannerExtension)
-        def scannerExec = downloadSonarScannerFiles()
-        sonarScannerExt.sonarScanner = sonarScannerExt.createSonarScanner(scannerExec)
-    }
-
-    private File downloadSonarScannerFiles() {
-        def version = version.get()
-        def dotnetVersion = SonarScannerInstaller.DOTNET_VERSION
-        def installationDir = installationDir.map{it.dir("sonarscanner-${version}")}.get()
+        def installationDir = installDir.get()
         def scannerInstaller = SonarScannerInstaller.gradleBased(project)
 
-        return sourceURL.map{urlStr ->
-            scannerInstaller.install(new URL(urlStr), installationDir.asFile)
-        }.orElse(
-                project.provider { scannerInstaller.install(version, dotnetVersion, installationDir.asFile) }
-        ).get()
-    }
-
-    @Input @Optional
-    Property<String> getSourceURL() {
-        return sourceURL
-    }
-
-    @Input
-    Property<String> getVersion() {
-        return version
-    }
-
-    @InputDirectory
-    DirectoryProperty getInstallationDir() {
-        return installationDir
-    }
-
-    void setSourceURL(String sourceURL) {
-        this.sourceURL.set(sourceURL)
-    }
-
-    void setVersion(String version) {
-        this.version.set(version)
-    }
-
-    void setInstallationDir(String installationDir) {
-        this.installationDir.set(project.layout.projectDirectory.dir(installationDir))
-    }
-
-    void setInstallationDir(File installationDir) {
-        this.installationDir.set(installationDir)
+        def executable = scannerInstaller.install(new URL(installURL.get()), installationDir.asFile)
+        sonarScannerEntrypoint.set(executable)
     }
 }

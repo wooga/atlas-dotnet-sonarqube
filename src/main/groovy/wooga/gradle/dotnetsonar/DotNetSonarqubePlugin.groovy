@@ -25,14 +25,21 @@ import org.sonarqube.gradle.SonarQubeProperties
 import wooga.gradle.dotnetsonar.tasks.BuildSolution
 import wooga.gradle.dotnetsonar.tasks.SonarScannerBegin
 import wooga.gradle.dotnetsonar.tasks.SonarScannerEnd
+import wooga.gradle.dotnetsonar.tasks.SonarScannerInstall
+import wooga.gradle.dotnetsonar.tasks.SonarScannerTask
 import wooga.gradle.dotnetsonar.tasks.internal.OSOps
+import wooga.gradle.dotnetsonar.tasks.internal.SonarScannerInstaller
 import wooga.gradle.github.base.GithubBasePlugin
 import wooga.gradle.github.base.GithubPluginExtension
 import wooga.gradle.github.base.internal.DefaultGithubPluginExtension
 
-import static wooga.gradle.dotnetsonar.SonarScannerExtension.*
-
 class DotNetSonarqubePlugin implements Plugin<Project> {
+
+    public static final String SONARSCANNER_EXTENSION_NAME = "sonarScanner"
+    public static final String DOTNET_BUILD_TASK_NAME = "solutionDotnetBuild"
+    public static final String INSTALL_TASK_NAME = "installSonarScanner"
+    public static final String BEGIN_TASK_NAME = "sonarScannerBegin"
+    public static final String END_TASK_NAME = "sonarScannerEnd"
 
     protected Project project
 
@@ -51,70 +58,78 @@ class DotNetSonarqubePlugin implements Plugin<Project> {
 
         project.tasks.withType(BuildSolution).configureEach {task ->
             def projectDir = project.layout.projectDirectory
-            task.msBuildExecutable.convention(sonarScannerExt.buildTools.msBuildExecutable)
-            task.dotnetExecutable.convention(sonarScannerExt.buildTools.dotnetExecutable)
+            task.executableName.convention(sonarScannerExt.dotnetExecutable)
             task.solution.convention(projectDir.file("${project.name}.sln"))
-
             sonarScannerExt.registerBuildTask(task)
         }
+        project.tasks.register(DOTNET_BUILD_TASK_NAME, BuildSolution)
 
-        project.tasks.register(MS_BUILD_TASK_NAME, BuildSolution).configure { task ->
-            task.buildTool.convention(task.msBuildBuildTool(sonarScannerExt.buildTools.msBuildExecutable.asFile))
+        def installTask = project.tasks.register(INSTALL_TASK_NAME, SonarScannerInstall) {installTask ->
+            installTask.onlyIf {
+                return !sonarScannerExt.sonarScannerExecutable.present
+            }
+            installTask.installURL.convention(sonarScannerExt.installInfo.installURL)
+            installTask.version.convention(sonarScannerExt.installInfo.version)
+            installTask.installDir.convention(sonarScannerExt.installInfo.installDir.map {
+                it.asFile.mkdirs()
+                return it
+            })
         }
 
-        project.tasks.register(DOTNET_BUILD_TASK_NAME, BuildSolution).configure { task ->
-            task.buildTool.convention(task.dotnetBuildTool(sonarScannerExt.buildTools.dotnetExecutable.asFile))
-        }
 
-        def beginTask = project.tasks.register(BEGIN_TASK_NAME, SonarScannerBegin) {beginTask ->
-            beginTask.sonarScanner.convention(sonarScannerExt.sonarScanner)
-            beginTask.sonarqubeProperties.convention(sonarScannerExt.sonarQubeProperties)
-        }
-
-        project.tasks.register(END_TASK_NAME, SonarScannerEnd) { endTask ->
-            def tokenProvider = sonarScannerExt.sonarQubeProperties.map{it["sonar.login"].toString()}
-            endTask.sonarScanner.convention(sonarScannerExt.sonarScanner)
+        def endTask = project.tasks.register(END_TASK_NAME, SonarScannerEnd) { endTask ->
+            def tokenProvider = sonarScannerExt.sonarQubeProperties.map{
+                it["sonar.login"].toString()
+            }
             endTask.loginToken.convention(tokenProvider)
-            endTask.dependsOn(beginTask)
+        }
+
+        project.tasks.register(BEGIN_TASK_NAME, SonarScannerBegin) {beginTask ->
+            beginTask.sonarqubeProperties.convention(sonarScannerExt.sonarQubeProperties)
+            beginTask.finalizedBy(endTask)
+        }
+
+        project.tasks.withType(SonarScannerTask).configureEach {
+            dependsOn(installTask)
+            it.dotnetExecutable.convention(sonarScannerExt.dotnetExecutable)
+            it.sonarScannerExecutable.convention(sonarScannerExt.sonarScannerExecutable.orElse(
+                    installTask.flatMap {it.sonarScannerEntrypoint }
+            ))
         }
     }
-
     SonarScannerExtension createSonarScannerExtension(ActionBroadcast<SonarQubeProperties> actionBroadcast) {
 
         def extension = project.extensions.create(SONARSCANNER_EXTENSION_NAME, SonarScannerExtension, project)
+
         def resolvedProperties = project.provider{ computeSonarProperties(actionBroadcast) }
         extension.sonarQubeProperties.convention(resolvedProperties)
-        extension.sonarScannerExecutable.convention(DotNetSonarqubePluginConventions.sonarScannerExecutable.getFileValueProvider(project))
 
-        DotNetSonarqubePluginConventions.monoExecutable.defaultValue = {
-            OSOps.findInOSPath(project, "dotnet")
-            .or { OSOps.findInOSPath(project, "mono") }
-                .map {it.absolutePath }
-            .orElse(null)
+        DotNetSonarqubePluginConventions.scannerExecutable.defaultValue = {
+            OSOps.findInOSPath(project, SonarScannerInstaller.EXECUTABLE_NAME).orElse(null)
         }
-        extension.monoExecutable.convention(DotNetSonarqubePluginConventions.monoExecutable.getFileValueProvider(project))
+        extension.dotnetExecutable.convention(DotNetSonarqubePluginConventions.scannerDotnetExecutable.getStringValueProvider(project))
+        extension.sonarScannerExecutable.convention(DotNetSonarqubePluginConventions.scannerExecutable.getFileValueProvider(project))
 
-        DotNetSonarqubePluginConventions.msbuildExecutable.defaultValue = {
-            OSOps.findInOSPath(project, "MSBuild.exe", "msbuild")
-                .map {it.absolutePath }
-            .orElse(null)
-        }
-        extension.buildTools.msBuildExecutable.convention(
-                DotNetSonarqubePluginConventions.msbuildExecutable.getFileValueProvider(project)
-        )
-
-        DotNetSonarqubePluginConventions.msbuildExecutable.defaultValue = {
-            OSOps.findInOSPath(project, "dotnet")
-                    .map {it.absolutePath }
-                    .orElse(null)
-        }
-        extension.buildTools.dotnetExecutable.convention(
-                DotNetSonarqubePluginConventions.dotnetExecutable.getFileValueProvider(project)
-        )
+        configureInstallInfo(extension.installInfo)
 
         return extension
     }
 
+    SonarScannerInstallInfo configureInstallInfo(SonarScannerInstallInfo installInfo) {
+        installInfo.dotnetFramework.convention("netcoreapp2.0")
+        DotNetSonarqubePluginConventions.scannerInstallUrl.defaultValue = {
+            installInfo.versionBasedSourceUrl.getOrElse(null)
+        }
+        installInfo.installURL.convention(DotNetSonarqubePluginConventions.scannerInstallUrl.getStringValueProvider(project))
+
+        installInfo.version.convention(DotNetSonarqubePluginConventions.scannerInstallVersion.getStringValueProvider(project))
+
+        DotNetSonarqubePluginConventions.scannerInstallDir.defaultValue = {
+            project.layout.buildDirectory.dir("bin/net-sonarscanner/${installInfo.version.get()}-${installInfo.dotnetFramework.get()}").getOrElse(null)
+        }
+        installInfo.installDir.convention(DotNetSonarqubePluginConventions.scannerInstallDir.getDirectoryValueProvider(project))
+        return installInfo
+    }
 
 
     //Wizardry from the sonarqube plugin. Needed for resolving the properties.

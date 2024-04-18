@@ -20,39 +20,28 @@ import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.file.RegularFile
-import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.MapProperty
-import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import wooga.gradle.dotnetsonar.tasks.SonarScannerBegin
 import wooga.gradle.dotnetsonar.tasks.SonarScannerEnd
-import wooga.gradle.dotnetsonar.tasks.internal.SonarScanner
-import wooga.gradle.dotnetsonar.tasks.internal.SonarScannerFactory
+import wooga.gradle.dotnetsonar.tasks.traits.SonarScannerSpec
 
 
-class SonarScannerExtension {
-
-    public static final String SONARSCANNER_EXTENSION_NAME = "sonarScanner"
-    public static final String MS_BUILD_TASK_NAME = "solutionMSBuild"
-    public static final String DOTNET_BUILD_TASK_NAME = "solutionDotnetBuild"
-    public static final String BEGIN_TASK_NAME = "sonarScannerBegin"
-    public static final String END_TASK_NAME = "sonarScannerEnd"
+class SonarScannerExtension implements SonarScannerSpec {
 
     private final Project project;
-    final SonarScannerInstallInfo installInfo
-    final BuildToolsInfo buildTools
-    private final Provider<SonarScanner> sonarScanner;
 
-    private final RegularFileProperty sonarScannerExecutable = project.objects.fileProperty()
-    private final RegularFileProperty monoExecutable = project.objects.fileProperty()
+    final SonarScannerInstallInfo installInfo
+
     private final MapProperty<String, ?> sonarQubeProperties = project.objects.mapProperty(String, Object)
+
+    MapProperty<String, ?> getSonarQubeProperties() {
+        return sonarQubeProperties;
+    }
 
     SonarScannerExtension(Project project) {
         this.project = project
-        this.installInfo = new SonarScannerInstallInfo(project)
-        this.buildTools = new BuildToolsInfo(project)
-        this.sonarScanner = createSonarScannerProvider(project, new SonarScannerFactory(project, monoExecutable.asFile))
+        this.installInfo = objects.newInstance(SonarScannerInstallInfo)
     }
 
     /**
@@ -64,7 +53,6 @@ class SonarScannerExtension {
         tasks.each {taskProvider ->
             taskProvider.configure { task -> this.registerBuildTask(task) }
         }
-
     }
 
     /**
@@ -81,7 +69,7 @@ class SonarScannerExtension {
     }
     /**
      * Convenience method for filling up sonarscanner installation info. Only used if sonar scanner is downloaded from remote.
-     * @param installInfoOps closure operating over install info object
+     * @param installInfoOps closure operating over @{SonarScannerInstallInfo} object
      */
     void installInfo(@DelegatesTo(SonarScannerInstallInfo)
                      @ClosureParams(value=SimpleType, options=["wooga.gradle.dotnetsonar.SonarScannerInstallInfo"])
@@ -89,76 +77,5 @@ class SonarScannerExtension {
         this.installInfo.with(installInfoOps)
     }
 
-    void buildTools(@DelegatesTo(BuildToolsInfo)
-                        @ClosureParams(value=SimpleType, options=["wooga.gradle.dotnetsonar.BuildToolsInfo"])
-                                Closure buildToolsOps) {
-        this.buildTools.with(buildToolsOps)
-    }
 
-    Provider<SonarScanner> getSonarScanner() {
-        return sonarScanner
-    }
-
-    Provider<SonarScanner> createSonarScannerProvider(Project project, SonarScannerFactory scanners) {
-        def workingDir = project.projectDir
-
-        def scannerFromFile = sonarScannerExecutable.map( { RegularFile scannerExec ->
-            scanners.fromExecutable(scannerExec.asFile, workingDir)
-        }.memoize())
-        def scannerFromPath = project.provider({ scanners.fromPath(workingDir).orElse(null) }.memoize())
-        def scannerFromRemote = installInfo.provideScannerFromRemote(project, scanners, workingDir)
-        return scannerFromFile.orElse(scannerFromPath).orElse(scannerFromRemote)
-    }
-
-    RegularFileProperty getMonoExecutable() {
-        return monoExecutable
-    }
-
-    void setMonoExecutable(Provider<RegularFile> monoExecutable) {
-        this.monoExecutable.set(monoExecutable)
-    }
-
-    void setMonoExecutable(RegularFileProperty monoExecutable) {
-        this.monoExecutable.set(monoExecutable)
-    }
-
-    void setMonoExecutable(File monoExecutable) {
-        this.monoExecutable.set(monoExecutable)
-    }
-
-    RegularFileProperty getDotnetExecutable() {
-        return monoExecutable
-    }
-
-    void setDotnetExecutable(Provider<RegularFile> monoExecutable) {
-        this.monoExecutable.set(monoExecutable)
-    }
-
-    void setDotnetExecutable(RegularFileProperty monoExecutable) {
-        this.monoExecutable.set(monoExecutable)
-    }
-
-    void setDotnetExecutable(File monoExecutable) {
-        this.monoExecutable.set(monoExecutable)
-    }
-
-    RegularFileProperty getSonarScannerExecutable() {
-        return sonarScannerExecutable
-    }
-
-    void setSonarScannerExecutable(File sonarScannerExecutable) {
-        this.sonarScannerExecutable.set(sonarScannerExecutable)
-    }
-
-    void setSonarScannerExecutable(RegularFileProperty sonarScannerExecutable) {
-        this.sonarScannerExecutable.set(sonarScannerExecutable)
-    }
-
-    void setSonarScannerExecutable(Provider<RegularFile> sonarScannerExecutable) {
-        this.sonarScannerExecutable.set(sonarScannerExecutable)
-    }
-
-    MapProperty<String, ?> getSonarQubeProperties() {
-        return sonarQubeProperties;
-    }
 }

@@ -3,27 +3,34 @@ package wooga.gradle.dotnetsonar
 import com.wooga.gradle.PropertyLookup
 
 class DotNetSonarqubePluginConventions {
-    static PropertyLookup sonarScannerExecutable = new PropertyLookup(
+
+    static PropertyLookup scannerInstallUrl = new PropertyLookup(
+            "SONAR_SCANNER_SCANNER_INSTALL_URL",
+            "sonarScanner.scannerInstallUrl",
+            null
+    )
+
+    static PropertyLookup scannerInstallDir = new PropertyLookup(
+            "SONAR_SCANNER_SCANNER_INSTALL_DIR",
+            "sonarScanner.scannerInstallDir",
+            null
+    )
+
+    static PropertyLookup scannerInstallVersion = new PropertyLookup(
+            "SONAR_SCANNER_SCANNER_INSTALL_VERSION",
+            "sonarScanner.sonarScannerVersion",
+            '5.15.1.88158'
+    )
+
+    static PropertyLookup scannerDotnetExecutable = new PropertyLookup(
+            "SONAR_SCANNER_SCANNER_DOTNET_EXECUTABLE",
+            "sonarScanner.scannerDotNetExecutable",
+            'dotnet' //system dotnet
+    )
+
+    static PropertyLookup scannerExecutable = new PropertyLookup(
             "SONAR_SCANNER_SONAR_SCANNER_EXECUTABLE",
-            "sonarScanner.sonarScannerExecutable",
-            null
-    )
-
-    static PropertyLookup monoExecutable = new PropertyLookup(
-            ["SONAR_SCANNER_MONO_EXECUTABLE", "SONAR_SCANNER_DOTNET_EXECUTABLE"],
-            ["sonarScanner.monoExecutable", "sonarScanner.dotnetExecutable"],
-            null
-    )
-
-    static PropertyLookup msbuildExecutable = new PropertyLookup(
-            ["SONAR_SCANNER_BUILD_TOOLS_MSBUILD_EXECUTABLE"],
-            "sonarScanner.buildTools.msBuildExecutable",
-            null
-    )
-
-    static PropertyLookup dotnetExecutable = new PropertyLookup(
-            ["SONAR_SCANNER_BUILD_TOOLS_DOTNET_EXECUTABLE"],
-            ["sonarScanner.buildTools.dotnetExecutable"],
+            "sonarScanner.scannerExecutable",
             null
     )
 }
