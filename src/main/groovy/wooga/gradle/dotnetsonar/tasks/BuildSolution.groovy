@@ -47,6 +47,6 @@ class BuildSolution extends Build {
     }
 
     BuildSolution() {
-        this.additionalArguments.addAll(solution.map {[it.asFile.absolutePath] }.orElse([]))
+        this.target.convention(solution.map {it.asFile.absolutePath})
     }
 }

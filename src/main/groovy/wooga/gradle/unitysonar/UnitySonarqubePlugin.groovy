@@ -1,5 +1,6 @@
 package wooga.gradle.unitysonar
 
+import com.wooga.gradle.PlatformUtils
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
@@ -18,6 +19,7 @@ import wooga.gradle.dotnetsonar.SonarScannerExtension
 import wooga.gradle.dotnetsonar.tasks.BuildSolution
 import wooga.gradle.unity.UnityPlugin
 import wooga.gradle.unity.UnityPluginExtension
+import wooga.gradle.unitysonar.tasks.DotnetWindowsInstall
 
 class UnitySonarqubePlugin implements Plugin<Project> {
 
@@ -33,9 +35,10 @@ class UnitySonarqubePlugin implements Plugin<Project> {
 
         def unitySonarqube = createExtension("unitySonarqube")
         //uses same dotnet version for both sonarScanner and buildTask
-        def asdf = configureAsdfWithTool("dotnet", unitySonarqube.buildDotnetVersion)
+        def asdf = project.extensions.getByType(AsdfPluginExtension)
         def unity = configureUnityPlugin()
-        configureSonarScanner(asdf)
+        def dotnetExecutable = getDotnet(asdf, unitySonarqube)
+        configureSonarScanner(dotnetExecutable)
         configureSonarqubePlugin(unity)
 
 
@@ -46,7 +49,7 @@ class UnitySonarqubePlugin implements Plugin<Project> {
             it.dependsOn(createSolutionTask)
             it.mustRunAfter(unityTestTask)
 
-            def buildDotnetDefault = unitySonarqube.buildDotnetExecutable.orElse(asdf.getTool("dotnet").getExecutable("dotnet"))
+            def buildDotnetDefault = unitySonarqube.buildDotnetExecutable.orElse(dotnetExecutable)
             it.executableName.convention(buildDotnetDefault)
             it.solution.convention(unity.projectDirectory.file("${project.name}.sln"))
             it.environment.put("FrameworkPathOverride", unity.monoFrameworkDir.map { it.asFile.absolutePath })
@@ -66,23 +69,15 @@ class UnitySonarqubePlugin implements Plugin<Project> {
         return unitySonarqube
     }
 
-    AsdfPluginExtension configureAsdfWithTool(String name, Provider<String> version) {
-        def asdf = project.extensions.getByType(AsdfPluginExtension)
-        asdf.tool(new ToolVersionInfo(name, version))
-        return asdf
-    }
-
     UnityPluginExtension configureUnityPlugin() {
         def unityExt = project.extensions.findByType(UnityPluginExtension)
         unityExt.enableTestCodeCoverage = true
         return unityExt
     }
 
-    SonarScannerExtension configureSonarScanner(AsdfPluginExtension asdf) {
+    SonarScannerExtension configureSonarScanner(Provider<String> dotnetExecutable) {
         def sonarScanner = project.extensions.findByType(SonarScannerExtension)
-
-        def asdfDotnet = asdf.getTool("dotnet")
-        sonarScanner.dotnetExecutable.convention(asdfDotnet.getExecutable("dotnet"))
+        sonarScanner.dotnetExecutable.convention(dotnetExecutable)
         return sonarScanner
     }
 
@@ -112,6 +107,27 @@ class UnitySonarqubePlugin implements Plugin<Project> {
         def propsFixTmpFile = File.createTempFile("unity-sonarqube-", ".project-fixes.props")
         propsFixTmpFile.text = propsFixResource.text
         return propsFixTmpFile
+    }
+
+    //https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-install-script
+    Provider<String> getDotnet(AsdfPluginExtension asdf, UnitySonarqubeExtension unitySonarqube) {
+        if(PlatformUtils.windows) {
+            def winInstall = project.tasks.register("dotnetWindowsInstall", DotnetWindowsInstall) {
+                it.version.convention(unitySonarqube.buildDotnetVersion)
+
+                def installDir = it.version.map {
+                    def dir = new File(project.gradle.gradleUserHomeDir,
+                                            "net.wooga.unity-sonarqube/dotnet/$it")
+                    dir.mkdirs()
+                    return dir
+                }
+                it.installDir.convention(project.layout.dir(installDir))
+            }
+            return winInstall.flatMap({ it.dotnetExecutable() })
+        } else {
+            asdf.tool(new ToolVersionInfo("dotnet", unitySonarqube.buildDotnetVersion))
+            return asdf.getTool("dotnet").getExecutable("dotnet")
+        }
     }
 
     protected <T extends Task> TaskProvider<T> namedOrRegister(String taskName, Class<T> type = DefaultTask.class, Action<T> configuration = { it -> }) {

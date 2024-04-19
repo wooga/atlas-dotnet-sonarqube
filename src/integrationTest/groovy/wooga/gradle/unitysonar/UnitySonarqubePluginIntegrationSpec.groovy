@@ -5,6 +5,8 @@ import com.wooga.gradle.test.run.result.GradleRunResult
 import com.wooga.gradle.test.writers.PropertyGetterTaskWriter
 import com.wooga.gradle.test.writers.PropertySetterWriter
 
+import static com.wooga.gradle.PlatformUtils.windows
+
 class UnitySonarqubePluginIntegrationSpec extends IntegrationSpec {
 
     def setup() {
@@ -33,10 +35,13 @@ class UnitySonarqubePluginIntegrationSpec extends IntegrationSpec {
 
         then:
         def run = new GradleRunResult(result)
-        run["asdfBinstubsDotnet"].wasExecutedBefore("sonarBuildUnity")
+        run[installDotnet].wasExecutedBefore("sonarBuildUnity")
         run["generateSolution"].wasExecutedBefore("sonarBuildUnity")
         run["sonarScannerBegin"].wasExecutedBefore("sonarBuildUnity")
         run["sonarScannerEnd"].wasExecutedAfter("sonarBuildUnity")
+
+        where:
+        installDotnet = isWindows()? "dotnetWindowsInstall" : "asdfBinstubsDotnet"
     }
 
     def "sonarqube build task runs after unity tests"() {
@@ -54,15 +59,22 @@ class UnitySonarqubePluginIntegrationSpec extends IntegrationSpec {
         given: "applied unity-sonarqube plugin"
         when:
         getter.write(buildFile)
-        def tasksResult = runTasks("asdfBinstubsDotnet", getter.taskName)
+        def tasksResult = runTasks(installDotnet, getter.taskName)
         def query = getter.generateQuery(this, tasksResult)
+        File dotnetExec = dotnetFile(projectDir)
 
         then:
-        query.matches(new File(projectDir, "bin/dotnet").absolutePath)
+        query.matches(dotnetExec.absolutePath)
 
         where:
+        installDotnet = isWindows()? "dotnetWindowsInstall" : "asdfBinstubsDotnet"
         task << ["sonarBuildUnity", "sonarScannerBegin", "sonarScannerEnd"]
         getter = new PropertyGetterTaskWriter("${task}.executable")
+
+        gradleHome = System.getenv("GRADLE_USER_HOME")? new File(System.getenv("GRADLE_USER_HOME")) : new File(System.getProperty("user.home"), ".gradle")
+        dotnetFile = isWindows()?
+                { _ -> new File(gradleHome, "net.wooga.unity-sonarqube/dotnet/7.0.100/dotnet.exe") }:
+                {File projDir -> new File(projDir, "bin/dotnet") }
     }
 
     def "#task uses extension-set dotnet as executable"() {

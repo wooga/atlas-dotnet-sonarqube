@@ -1,5 +1,6 @@
 package wooga.gradle.unitysonar
 
+import com.wooga.gradle.PlatformUtils
 import nebula.test.ProjectSpec
 import org.gradle.api.DefaultTask
 import org.gradle.api.Task
@@ -8,6 +9,8 @@ import wooga.gradle.dotnetsonar.SonarScannerExtension
 import wooga.gradle.dotnetsonar.tasks.BuildSolution
 import wooga.gradle.unity.UnityPlugin
 import wooga.gradle.unity.UnityPluginExtension
+
+import static com.wooga.gradle.PlatformUtils.windows
 
 class UnitySonarqubePluginSpec extends ProjectSpec {
 
@@ -47,17 +50,18 @@ class UnitySonarqubePluginSpec extends ProjectSpec {
 
         then:
         Task task = project.tasks.findByName(taskName)
-        task.getTaskDependencies().getDependencies(task).findAll { t ->
-            dependencies.find {
-                depName -> t.name == depName
-            }
+        dependencies.each {expectedDepName ->
+            def taskDeps = task.getTaskDependencies().getDependencies(task)
+            def actualDepName = taskDeps.find {it.name == expectedDepName }?.name
+            assert expectedDepName == actualDepName
         }
         task.getFinalizedBy().getDependencies(task).collect{it.name } == finalizedBy
 
         where:
         taskName          | dependencies                                                    | finalizedBy
         "sonarqube"       | [UnityPlugin.Tasks.test.toString(), "sonarBuildUnity"]          | []
-        "sonarBuildUnity" | ["asdfBinstubsDotnet", "generateSolution", "sonarScannerBegin"] | ["sonarScannerEnd"]
+        "sonarBuildUnity" | [isWindows()? "dotnetWindowsInstall" : "asdfBinstubsDotnet", "generateSolution", "sonarScannerBegin"] | ["sonarScannerEnd"]
+
     }
 
     def "configures sonarqube extension"() {
