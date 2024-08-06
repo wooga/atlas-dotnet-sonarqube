@@ -16,15 +16,15 @@
 
 package wooga.gradle.dotnetsonar.tasks
 
-import com.wooga.gradle.test.executable.FakeExecutables
 import com.wooga.spock.extensions.github.GithubRepository
 import com.wooga.spock.extensions.github.Repository
 import com.wooga.spock.extensions.github.api.RateLimitHandlerWait
 import com.wooga.spock.extensions.github.api.TravisBuildNumberPostFix
 import org.ajoberstar.grgit.Grgit
-import org.gradle.api.GradleException
+import org.gradle.process.internal.ExecException
 import spock.lang.Unroll
 import wooga.gradle.dotnetsonar.tasks.utils.PluginIntegrationSpec
+import wooga.gradle.dotnetsonar.utils.FakeExecutable
 
 class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
 
@@ -37,9 +37,9 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
     )
     def "task executes sonar scanner tool begin command with git-based properties"(Repository testRepo) {
         given: "a sonar scanner executable"
-        def fakeSonarScannerExec = FakeExecutables.argsReflector("sonarscanner", 0)
+        def fakeSonarScannerExec = argReflectingFakeExecutable("sonarscanner", 0)
         and: "a set up sonar scanner extension"
-        buildFile << forceAddObjectsToExtension(fakeSonarScannerExec.executable)
+        buildFile << forceAddObjectsToExtension(fakeSonarScannerExec)
         and: "a set up github extension"
         buildFile << """
         github {
@@ -53,7 +53,7 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
         def result = runTasksSuccessfully("sonarScannerBegin")
 
         then:
-        def execResults = fakeSonarScannerExec.firstResult(result.standardOutput)
+        def execResults = FakeExecutable.lastExecutionResults(result)
         def companyName = testRepo.fullName.split("/")[0]
         execResults.args.contains("-n:${testRepo.name}".toString())
         execResults.args.contains("-k:${companyName}_${testRepo.name}".toString())
@@ -61,32 +61,32 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
 
     def "task sets branch property name accordingly with its PR or non-PR status"() {
         given: "a sonar scanner executable"
-        def fakeSonarScanner = FakeExecutables.argsReflector("sonarscanner", 0)
+        def fakeSonarScannerExec = argReflectingFakeExecutable("sonarscanner", 0)
         and: "a set up sonar scanner extension"
-        buildFile << forceAddObjectsToExtension(fakeSonarScanner.executable)
+        buildFile << forceAddObjectsToExtension(fakeSonarScannerExec)
 
         when:
         def result = runTasksSuccessfully("sonarScannerBegin")
 
         then:
-        def execResults = fakeSonarScanner.firstResult(result.standardOutput)
-        if (expectedBranchProperty) {
+        def execResults = FakeExecutable.lastExecutionResults(result)
+        if(expectedBranchProperty) {
             execResults.args.contains("-d:sonar.branch.name=${expectedBranchProperty}".toString())
         } else {
             !execResults.args.contains("-d:sonar.branch.name")
         }
         where:
         branchName | expectedBranchProperty
-        "name"     | "name"
-        "PR-10"    | null
-        "PR-fe"    | "PR-fe"
+        "name" | "name"
+        "PR-10" | null
+        "PR-fe" | "PR-fe"
     }
 
     def "task executes sonar scanner tool begin command with extension properties"() {
         given: "a sonar scanner executable"
-        def fakeSonarScanner = FakeExecutables.argsReflector("sonarscanner", 0)
+        def fakeSonarScannerExec = argReflectingFakeExecutable("sonarscanner", 0)
         and: "a set up sonar scanner extension"
-        buildFile << forceAddObjectsToExtension(fakeSonarScanner.executable)
+        buildFile << forceAddObjectsToExtension(fakeSonarScannerExec)
 
         and: "a configured github extension"
         def companyName = "company"
@@ -118,7 +118,7 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
         def result = runTasksSuccessfully("sonarScannerBegin")
 
         then:
-        def execResults = fakeSonarScanner.firstResult(result.standardOutput)
+        def execResults = FakeExecutable.lastExecutionResults(result)
         execResults.args.contains("-n:${repoName}".toString())
         execResults.args.contains("-k:${companyName}_${repoName}".toString())
         execResults.args.contains("-v:${projectVersion}".toString())
@@ -130,11 +130,12 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
 
     def "task executes sonar scanner tool begin command with task properties"() {
         given: "a sonar scanner executable"
-        def fakeSonarScanner = FakeExecutables.argsReflector("sonarscanner", 0)
+        def fakeSonarScannerExec = argReflectingFakeExecutable("sonarscanner", 0)
         and: "a set up sonar scanner task"
-        buildFile << forceAddObjectsToExtension(fakeSonarScanner.executable)
         buildFile << """
+        ${createSonarScannerFromExecutable("scanner", fakeSonarScannerExec)}
         sonarScannerBegin {
+            sonarScanner.set(scanner)
             sonarqubeProperties.put("sonar.projectKey", "key")
             sonarqubeProperties.put("sonar.projectName", "name")
             sonarqubeProperties.put("sonar.version", "0.0.1")
@@ -145,7 +146,7 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
         when: "running the sonarScannerBegin task"
         def result = runTasksSuccessfully("sonarScannerBegin")
         then:
-        def execResults = fakeSonarScanner.firstResult(result.standardOutput)
+        def execResults = FakeExecutable.lastExecutionResults(result)
         execResults.args.contains("-k:key")
         execResults.args.contains("-v:0.0.1")
         execResults.args.contains("-n:name")
@@ -156,13 +157,14 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
     @Unroll
     def "task fails #key property isn't present"() {
         given: "a sonar scanner executable"
-        def fakeSonarScanner = FakeExecutables.argsReflector("sonarscanner", 0)
+        def fakeSonarScannerExec = argReflectingFakeExecutable("sonarscanner", 0)
         and: "a set up sonar scanner task without mandatory properties"
-        buildFile << forceAddObjectsToExtension(fakeSonarScanner.executable)
         buildFile << """
+        ${createSonarScannerFromExecutable("scanner", fakeSonarScannerExec)}
         sonarScannerBegin {
-        ${key == "sonar.projectKey" ?
-                """sonarqubeProperties.put("sonar.version", "val")""" :
+            sonarScanner.set(scanner)
+        ${key=="sonar.projectKey"?
+                """sonarqubeProperties.put("sonar.version", "val")""":
                 """sonarqubeProperties.put("sonar.projectKey", "val")"""}
             sonarqubeProperties.put("sonar.exclusions", "src")
             sonarqubeProperties.put("sonar.prop", "value")
@@ -174,7 +176,7 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
         then:
         def e = rootCause(result.failure)
         e instanceof IllegalArgumentException
-        e.message == "SonarScannerBegin task needs a set ${key} property"
+        e.message == "SonarqubeBegin needs a set ${key} property"
 
         where:
         key << ["sonar.projectKey", "sonar.version"]
@@ -182,19 +184,19 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
 
     def "task fails if sonar scanner tool begin command returns non-zero status"() {
         given: "a failing sonar scanner executable"
-        def fakeSonarScanner = FakeExecutables.argsReflector("sonarscanner", 1)
+        def fakeSonarScannerExec = argReflectingFakeExecutable("sonarscanner", 1)
         and: "a set up sonar scanner extension"
-        buildFile << forceAddObjectsToExtension(fakeSonarScanner.executable)
+        buildFile << forceAddObjectsToExtension(fakeSonarScannerExec)
 
         when: "running the sonarScannerBegin task"
         def result = runTasksWithFailure("sonarScannerBegin")
 
         then: "should fail on execution with non-zero exit value"
         def e = rootCause(result.failure)
-        e.getClass().name == GradleException.name
+        e.getClass().name == ExecException.name
         e.message.contains("exit value 1")
     }
 }
-
+import static wooga.gradle.dotnetsonar.utils.SpecFakes.argReflectingFakeExecutable
 
 import static wooga.gradle.dotnetsonar.utils.SpecUtils.rootCause

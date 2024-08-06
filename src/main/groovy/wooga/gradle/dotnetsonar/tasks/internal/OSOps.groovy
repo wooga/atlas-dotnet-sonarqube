@@ -17,8 +17,6 @@
 package wooga.gradle.dotnetsonar.tasks.internal
 
 import org.gradle.api.Project
-import org.gradle.api.file.RegularFile
-import org.gradle.api.provider.Provider
 import org.gradle.process.ExecSpec
 
 class OSOps {

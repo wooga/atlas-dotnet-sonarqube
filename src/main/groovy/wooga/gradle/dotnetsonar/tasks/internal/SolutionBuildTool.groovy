@@ -16,9 +16,10 @@
 
 package wooga.gradle.dotnetsonar.tasks.internal
 
+interface SolutionBuildTool {
 
-interface Shell {
+    public void buildSolution(File solution);
+    public void buildSolution(File solution, Map<String, ?> environment);
+    public void buildSolution(File solution, Map<String, ?> environment, List<?> extraArgs);
 
-    ShellResult execute(Closure execSpecClosure)
-    ShellResult execute(boolean logging, Closure execSpecClosure)
 }

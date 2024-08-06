@@ -16,24 +16,28 @@
 
 package wooga.gradle.dotnetsonar
 
-import com.wooga.gradle.test.executable.FakeExecutables
 import spock.lang.Unroll
 import wooga.gradle.dotnetsonar.tasks.internal.SonarScannerInstaller
 import wooga.gradle.dotnetsonar.tasks.utils.PluginIntegrationSpec
+import wooga.gradle.dotnetsonar.utils.SpecFakes
 
+import static wooga.gradle.dotnetsonar.utils.SpecUtils.wasExecutedAfter
+import static wooga.gradle.dotnetsonar.utils.SpecUtils.wasExecutedBefore
 import static wooga.gradle.dotnetsonar.tasks.internal.SonarScannerInstaller.defaultBaseURL
-import static wooga.gradle.dotnetsonar.utils.SpecUtils.*
+import static wooga.gradle.dotnetsonar.utils.SpecUtils.wrapValueBasedOnType
+
 
 class SonarScannerExtensionIntegrationSpec extends PluginIntegrationSpec {
 
     def "registers custom build task for sonar scanner"() {
-        given: "a sonar scanner executable"
-        def fakeScanner = FakeExecutables.argsReflector("sonarscanner", 0)
+        given: "a sonnar scanner executable"
+        File fakeScannerExec = SpecFakes.argReflectingFakeExecutable("sonarscanner")
         and: "custom task registering itself on sonar scanner extension"
         buildFile << """
-        ${forceAddObjectsToExtension(fakeScanner.executable)}
+        ${forceAddObjectsToExtension(fakeScannerExec)}
+        ${getSonarScannerExtension("sonarScannerExt")}
         tasks.register("custom") {
-            sonarScanner.registerBuildTask(it)
+            sonarScannerExt.registerBuildTask(it)
         }
         """
         when: "executing custom task"
@@ -52,19 +56,16 @@ class SonarScannerExtensionIntegrationSpec extends PluginIntegrationSpec {
         and: "unset sonarScannerExecutable property in the extension"
 
         when: "running tasks dependent on sonar scanner executable"
-        def result = runTasks("sonarScannerBegin")
+        runTasks("sonarScannerBegin")
 
         then: "dotnet sonar scanner package should be installed at default directory"
-        result.wasExecuted(":installSonarScanner")
-        def defaultInstallDir = "build/bin/net-sonarscanner/${defaultVersion}-netcoreapp2.0"
-        new File(projectDir, "${defaultInstallDir}/${SonarScannerInstaller.DLL_NAME}").exists()
-
-        where:
-        defaultVersion = DotNetSonarqubePluginConventions.scannerInstallVersion.defaultValue.toString()
+        def defaultInstallDir = "build/bin/net-sonarscanner/"
+        new File(projectDir,
+            "${defaultInstallDir}/${SonarScannerInstaller.EXECUTABLE_NAME}").exists()
     }
 
     @Unroll
-    def "installs sonar scanner version #version-netcoreapp2.0 in #installDir"() {
+    def "installs sonar scanner version #version-net46 in #installDir"() {
         given: "installed dotnet sonarscanner plugin"
         and: "no pre-existent sonarscanner executable on PATH"
         and: "configured sonar scanner extension"
@@ -72,17 +73,16 @@ class SonarScannerExtensionIntegrationSpec extends PluginIntegrationSpec {
         sonarScanner {
             installInfo {
                 version = "${version}"
-                installDir = ${wrapValueBasedOnType(installDir, File)}
+                installDir = "${installDir}"
             }
         }
         """
         when: "running tasks dependent on sonar scanner executable"
-        def result = runTasks("sonarScannerBegin")
+        runTasks("sonarScannerBegin")
 
         then: "dotnet sonar scanner package should be installed at default directory"
-        result.wasExecuted(":installSonarScanner")
         new File(projectDir,
-                "${installDir}/${SonarScannerInstaller.DLL_NAME}").exists()
+                "${installDir}/${SonarScannerInstaller.EXECUTABLE_NAME}").exists()
         where:
         version         | installDir
         "5.2.2.33595"   | "bin/fdlr"
@@ -98,16 +98,15 @@ class SonarScannerExtensionIntegrationSpec extends PluginIntegrationSpec {
         buildFile << """
         sonarScanner {
             installInfo {
-                installURL = "${url}"
-                installDir = ${wrapValueBasedOnType(installDir, File)}
+                sourceURL = "${url}"
+                installDir = "${installDir}"
             }
         }
         """
         when: "running tasks dependent on sonar scanner executable"
-        def result = runTasks("sonarScannerBegin")
+        runTasks("sonarScannerBegin")
 
         then: "dotnet sonar scanner package should be installed at default directory"
-        result.wasExecuted(":installSonarScanner")
         new File(projectDir,
                 "${installDir}/${SonarScannerInstaller.EXECUTABLE_NAME}").exists()
         where:
@@ -119,10 +118,10 @@ class SonarScannerExtensionIntegrationSpec extends PluginIntegrationSpec {
     def "doesn't install sonar scanner if executable already exists on extension"() {
         given: "installed dotnet sonarscanner plugin"
         and: "pre-existent sonarscanner executable"
-        def sonarScannerExec = FakeExecutables.argsReflector("sonarscanner.bat", 0)
+        def sonarScannerExec = SpecFakes.argReflectingFakeExecutable("sonarscanner.bat")
         buildFile << """
         sonarScanner {
-            sonarScannerExecutable = ${wrapValueBasedOnType(sonarScannerExec.executable.absolutePath, File)}
+            sonarScannerExecutable = ${wrapValueBasedOnType(sonarScannerExec.absolutePath, File)}
             installInfo {
                 version = "5.2.1.31210"
             }
@@ -130,10 +129,9 @@ class SonarScannerExtensionIntegrationSpec extends PluginIntegrationSpec {
         """
 
         when: "running tasks dependent on sonar scanner executable"
-        def result = runTasks("sonarScannerBegin")
+        runTasks("sonarScannerBegin")
 
         then: "sonar scanner should not be downloaded"
-        result.standardOutput.contains(":installSonarScanner SKIPPED")
         def defaultInstallDir = "build/bin/net-sonarscanner/"
         !new File(projectDir,
                 "${defaultInstallDir}/${SonarScannerInstaller.EXECUTABLE_NAME}").exists()
