@@ -1,6 +1,6 @@
 package wooga.gradle.unitysonar
 
-import com.wooga.gradle.PlatformUtils
+
 import nebula.test.ProjectSpec
 import org.gradle.api.DefaultTask
 import org.gradle.api.Task

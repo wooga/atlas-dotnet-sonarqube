@@ -22,11 +22,7 @@ import org.sonarqube.gradle.ActionBroadcast
 import org.sonarqube.gradle.SonarPropertyComputer
 import org.sonarqube.gradle.SonarQubeExtension
 import org.sonarqube.gradle.SonarQubeProperties
-import wooga.gradle.dotnetsonar.tasks.BuildSolution
-import wooga.gradle.dotnetsonar.tasks.SonarScannerBegin
-import wooga.gradle.dotnetsonar.tasks.SonarScannerEnd
-import wooga.gradle.dotnetsonar.tasks.SonarScannerInstall
-import wooga.gradle.dotnetsonar.tasks.SonarScannerTask
+import wooga.gradle.dotnetsonar.tasks.*
 import wooga.gradle.dotnetsonar.tasks.internal.OSOps
 import wooga.gradle.dotnetsonar.tasks.internal.SonarScannerInstaller
 import wooga.gradle.github.base.GithubBasePlugin

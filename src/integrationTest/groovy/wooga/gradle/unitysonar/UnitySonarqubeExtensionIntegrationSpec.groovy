@@ -6,10 +6,7 @@ import com.wooga.gradle.test.writers.PropertyGetterTaskWriter
 import com.wooga.gradle.test.writers.PropertySetterWriter
 import spock.lang.Unroll
 
-import static com.wooga.gradle.test.writers.PropertySetInvocation.getAssignment
-import static com.wooga.gradle.test.writers.PropertySetInvocation.getNone
-import static com.wooga.gradle.test.writers.PropertySetInvocation.getProviderSet
-import static com.wooga.gradle.test.writers.PropertySetInvocation.getSetter
+import static com.wooga.gradle.test.writers.PropertySetInvocation.*
 
 class UnitySonarqubeExtensionIntegrationSpec extends IntegrationSpec {
 

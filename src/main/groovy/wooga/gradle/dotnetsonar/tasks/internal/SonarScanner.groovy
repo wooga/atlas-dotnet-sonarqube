@@ -16,8 +16,6 @@
 
 package wooga.gradle.dotnetsonar.tasks.internal
 
-import com.wooga.gradle.io.ExecSpec
-
 class SonarScanner implements Serializable {
 
     private File executable;
