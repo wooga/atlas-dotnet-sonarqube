@@ -26,6 +26,8 @@ import org.gradle.api.GradleException
 import spock.lang.Unroll
 import wooga.gradle.dotnetsonar.tasks.utils.PluginIntegrationSpec
 
+import static wooga.gradle.dotnetsonar.utils.SpecUtils.rootCause
+
 class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
 
     @GithubRepository(
@@ -195,6 +197,3 @@ class SonarScannerBeginTaskIntegrationSpec extends PluginIntegrationSpec {
         e.message.contains("exit value 1")
     }
 }
-
-
-import static wooga.gradle.dotnetsonar.utils.SpecUtils.rootCause

@@ -1,12 +1,7 @@
 package wooga.gradle.unitysonar
 
 import com.wooga.gradle.PlatformUtils
-import org.gradle.api.Action
-import org.gradle.api.DefaultTask
-import org.gradle.api.Plugin
-import org.gradle.api.Project
-import org.gradle.api.Task
-import org.gradle.api.UnknownTaskException
+import org.gradle.api.*
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.sonarqube.gradle.SonarQubeExtension

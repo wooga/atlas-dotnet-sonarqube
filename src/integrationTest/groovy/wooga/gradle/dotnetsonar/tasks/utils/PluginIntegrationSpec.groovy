@@ -21,6 +21,7 @@ import com.wooga.gradle.test.executable.FakeExecutables
 import wooga.gradle.dotnetsonar.DotNetSonarqubePlugin
 import wooga.gradle.dotnetsonar.SonarScannerExtension
 import wooga.gradle.dotnetsonar.tasks.internal.SonarScanner
+
 import static wooga.gradle.dotnetsonar.utils.SpecUtils.wrapValueBasedOnType
 
 class PluginIntegrationSpec extends IntegrationSpec {

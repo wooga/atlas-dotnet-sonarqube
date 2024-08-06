@@ -21,7 +21,6 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.TaskAction
 import wooga.gradle.dotnet.tasks.Build
 
 class BuildSolution extends Build {
