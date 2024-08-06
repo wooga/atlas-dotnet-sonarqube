@@ -16,49 +16,64 @@
 
 package wooga.gradle.dotnetsonar.tasks.internal
 
-import com.wooga.gradle.io.ExecSpec
+import org.gradle.api.Project
+import org.gradle.process.ExecSpec
 
 class SonarScanner implements Serializable {
 
+    static SonarScanner nativeBased(Project project, File executable, File workingDir) {
+        return new SonarScanner(new GradleShell(project), executable, workingDir)
+    }
+
+    static SonarScanner monoBased(Project project, File executable, File monoExecutable, File workingDir) {
+        return new SonarScanner(GradleMonoShell.forProject(project, monoExecutable), executable, workingDir)
+    }
+
+    private Shell shell;
     private File executable;
+    private File workingDir;
 
-    SonarScanner(File executable) {
+    private SonarScanner(Shell shell, File executable, File workingDir) {
+        this.shell = shell
         this.executable = executable
+        this.workingDir = workingDir
     }
 
-    List<String> beginArgs(String sonarProjectKey, String sonarProjectName, String version, Map<String, Object> sonarqubeProperties) {
-        def args = new ArrayList<String>()
-        args.add(executable.absolutePath)
-        args.add("begin")
-        args.add("-k:${sonarProjectKey}")
-        if(sonarProjectName != null) {
-            args.add("-n:${sonarProjectName}")
-        }
-        if(version != null) {
-            args.add("-v:${version}")
-        }
-        addPropertiesArgs(args, sonarqubeProperties)
-        return args
+    public void begin(String sonarProjectKey, String sonarProjectName, String version, Map<String, Object> sonarqubeProperties) {
+       shell.execute { ExecSpec execSpec ->
+           execSpec.workingDir = workingDir
+           execSpec.executable = executable.absolutePath
+           execSpec.args("begin")
+           execSpec.args("-k:${sonarProjectKey}")
+           if(sonarProjectName != null) {
+               execSpec.args("-n:${sonarProjectName}")
+           }
+           if(version != null) {
+               execSpec.args("-v:${version}")
+           }
+           addPropertiesArgs(execSpec, sonarqubeProperties)
+        }.throwsOnFailure()
     }
 
-    List<String> endArgs(String loginToken=null) {
-        def args = new ArrayList<String>()
-        args.add(executable.absolutePath)
-        args.add("end")
-        if(loginToken != null) {
-            addPropertiesArgs(args, ["sonar.login": loginToken])
-        }
-        return args
+    public void end(String loginToken=null) {
+        shell.execute { ExecSpec execSpec ->
+            execSpec.workingDir = workingDir
+            execSpec.executable = executable.absolutePath
+            execSpec.args("end")
+            if(loginToken != null) {
+                addPropertiesArgs(execSpec, ["sonar.login": loginToken])
+            }
+        }.throwsOnFailure()
     }
 
-    static void addPropertiesArgs(List<String> args, Map<String, Object> sonarqubeProperties) {
+    static void addPropertiesArgs(ExecSpec execSpec, Map<String, Object> sonarqubeProperties) {
         sonarqubeProperties.entrySet().findAll {
             it.key != "sonar.projectKey" && //replaced by -k
             it.key != "sonar.projectName" && //replaced by -n
             it.key != "sonar.projectVersion" && //replace by -v
             it.key != "sonar.working.directory" //automatically set by SonarScanner and cannot be overridden
         }.forEach() { propEntry ->
-                args.add("-d:${propEntry.key}=${propEntry.value.toString()}")
+                execSpec.args("-d:${propEntry.key}=${propEntry.value.toString()}")
         }
     }
 }

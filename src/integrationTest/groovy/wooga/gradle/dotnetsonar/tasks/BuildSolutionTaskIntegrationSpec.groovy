@@ -16,27 +16,28 @@
 
 package wooga.gradle.dotnetsonar.tasks
 
-import com.wooga.gradle.test.executable.FakeExecutables
-import org.gradle.api.GradleException
+import org.gradle.process.internal.ExecException
 import spock.lang.Unroll
 import wooga.gradle.dotnetsonar.tasks.utils.PluginIntegrationSpec
 
 import java.nio.file.Paths
 
+import static wooga.gradle.dotnetsonar.utils.FakeExecutable.executionResults
+import static wooga.gradle.dotnetsonar.utils.SpecFakes.argReflectingFakeExecutable
 import static wooga.gradle.dotnetsonar.utils.SpecUtils.rootCause
 import static wooga.gradle.dotnetsonar.utils.SpecUtils.wrapValueBasedOnType
 
 class BuildSolutionTaskIntegrationSpec extends PluginIntegrationSpec {
 
     def setup() {
-        def fakeSonarScanner = FakeExecutables.argsReflector("sonarscanner", 0)
-        buildFile << forceAddObjectsToExtension(fakeSonarScanner.executable)
+        def fakeSonarScannerExec = argReflectingFakeExecutable("sonarscanner", 0)
+        buildFile << forceAddObjectsToExtension(fakeSonarScannerExec)
     }
 
     @Unroll
     def "Builds a C# solution with dotnet #subtool #extraArgs command"() {
         given: "a msbuild executable"
-        def fakeBuild = FakeExecutables.argsReflector("dotnet-build", 0)
+        def fakeBuildExec = argReflectingFakeExecutable("dotnet", 0)
         and: "fake solution file"
         new File(projectDir, solutionPath).with {
             parentFile.mkdirs()
@@ -45,19 +46,18 @@ class BuildSolutionTaskIntegrationSpec extends PluginIntegrationSpec {
         and: "build file with configured task"
         buildFile << """
         project.tasks.create("solutionBuild", ${BuildSolution.name}) {
-            executable = ${wrapValueBasedOnType(fakeBuild.executable.absolutePath, File)}
+            dotnetExecutable = ${wrapValueBasedOnType(fakeBuildExec.absolutePath, File)}
             solution = ${wrapValueBasedOnType(solutionPath, File)}
             environment = ${wrapValueBasedOnType(environment, Map)}
-            additionalArguments.addAll(${wrapValueBasedOnType(extraArgs, List)})
+            extraArgs = ${wrapValueBasedOnType(extraArgs, List)}
         }
         """
         when:
         def result = runTasksSuccessfully("solutionBuild")
 
         then:
-        def buildResult = fakeBuild.firstResult(result.standardOutput)
-        def args = [Paths.get(projectDir.absolutePath, solutionPath).toString()] + extraArgs
-        buildResult.args == subtool + args
+        def buildResult = executionResults(fakeBuildExec, result)
+        buildResult.args == subtool + [Paths.get(projectDir.absolutePath, solutionPath).toString()] + extraArgs
         buildResult.envs.entrySet().containsAll(environment.entrySet())
 
         where:
@@ -66,10 +66,11 @@ class BuildSolutionTaskIntegrationSpec extends PluginIntegrationSpec {
         "dir/solution.sln" | ["build"] | ["b": "c"]  | ["-arg", "/arg:value"]
     }
 
+
     @Unroll
-    def "BuildSolution task fails if tool returns non-zero status"() {
-        given: "a build executable"
-        def fakeDotnet = FakeExecutables.argsReflector("dotnet", 1)
+    def "Builds a C# solution with msbuild #extraArgs command"() {
+        given: "a msbuild executable"
+        def fakeBuildExec = argReflectingFakeExecutable("msBuild", 0)
         and: "fake solution file"
         new File(projectDir, solutionPath).with {
             parentFile.mkdirs()
@@ -78,7 +79,39 @@ class BuildSolutionTaskIntegrationSpec extends PluginIntegrationSpec {
         and: "build file with configured task"
         buildFile << """
         project.tasks.create("solutionBuild", ${BuildSolution.name}) {
-            executable = ${wrapValueBasedOnType(fakeDotnet.executable.absolutePath, File)}
+            msBuildExecutable = ${wrapValueBasedOnType(fakeBuildExec.absolutePath, File)}
+            solution = ${wrapValueBasedOnType(solutionPath, File)}
+            environment = ${wrapValueBasedOnType(environment, Map)}
+            extraArgs = ${wrapValueBasedOnType(extraArgs, List)}
+        }
+        """
+        when:
+        def result = runTasksSuccessfully("solutionBuild")
+
+        then:
+        def buildResult = executionResults(fakeBuildExec, result)
+        buildResult.args == extraArgs + [Paths.get(projectDir.absolutePath, solutionPath).toString()]
+        buildResult.envs.entrySet().containsAll(environment.entrySet())
+
+        where:
+        solutionPath       | environment | extraArgs
+        "solution.sln"     | ["a": "b"]  | []
+        "solution.sln"     | [:]         | ["-arg", "/arg:value"]
+    }
+
+    @Unroll
+    def "#tool build task fails if tool returns non-zero status"() {
+        given: "a build executable"
+        def fakeMsBuildExec = argReflectingFakeExecutable(tool, 1)
+        and: "fake solution file"
+        new File(projectDir, solutionPath).with {
+            parentFile.mkdirs()
+            createNewFile()
+        }
+        and: "build file with configured task"
+        buildFile << """
+        project.tasks.create("solutionBuild", ${BuildSolution.name}) {
+            ${tool}Executable = ${wrapValueBasedOnType(fakeMsBuildExec.absolutePath, File)}
             solution = ${wrapValueBasedOnType(solutionPath, File)}
         }
         """
@@ -87,9 +120,11 @@ class BuildSolutionTaskIntegrationSpec extends PluginIntegrationSpec {
 
         then: "should fail on execution with non-zero exit value"
         def e = rootCause(result.failure)
-        e.getClass().name == GradleException.name
+        e.getClass().name == ExecException.name
+        e.message.contains(fakeMsBuildExec.absolutePath)
         e.message.contains("exit value 1")
         where:
+        tool << ["msBuild", "dotnet"]
         solutionPath = "solution.sln"
     }
 }
